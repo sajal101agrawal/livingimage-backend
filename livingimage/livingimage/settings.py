@@ -139,12 +139,15 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_HOST_USER = 'adilwebsite01@gmail.com'
-EMAIL_HOST_PASSWORD = 'ueydyvzeginpitoc'  # Replace 'password' with the actual password
-EMAIL_USE_SSL = True
+EMAIL_HOST = 'smtpout.secureserver.net'  # GoDaddy SMTP server
+EMAIL_PORT = 465  # Use 465 for SSL/TLS
+EMAIL_USE_SSL = True  # Enable SSL/TLS encryption
+EMAIL_HOST_USER = 'support@livingimage.io'  # Your GoDaddy email address
+EMAIL_HOST_PASSWORD = '@Livingimage123'  # Your GoDaddy email password
+
+ 
 
 
 # In settings.py
