@@ -260,7 +260,7 @@ class UserProfileView(APIView):
         user_id = get_user_id_from_token(request)
         user = CustomUser.objects.filter(id=user_id).first()
         #print("the user is",user.email)
-        
+        image_count=0
         for history in History.objects.filter(user=user) :
 #-------------------------Code to fetch the error in the section---------------------------------------------------
             # try:
@@ -274,8 +274,10 @@ class UserProfileView(APIView):
             #     print(f"Error decoding JSON for history date {history.created}: {e}")
             #     continue
 #-------------------------Code to fetch the error in the section---------------------------------------------------
+            
             tmp = {
                 'user' : history.user.email,
+                'image_id' : history.id,
                 'image_data' : history.image_data.url,
                 'public' : history.public,
                 'prompt' : history.prompt,
@@ -515,6 +517,77 @@ class UploadImageView(View):
         #     print(form.errors)
         #     return Response({'Message': 'Image Upload Unsuccessful.'}, status=status.HTTP_400_BAD_REQUEST)#render(request, 'myapp/upload.html', {'form': form})
 
+from django.contrib.auth.decorators import login_required
+
+# @method_decorator(csrf_exempt, name='dispatch')
+class DeleteImageView(View):
+    @csrf_exempt
+    #@login_required
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request):
+        image_id = request.POST.get('image_id')
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if user:
+            try:
+                image = Image.objects.get(id=image_id, user=user)
+                # Delete the image
+                image.delete()
+                # Delete related regenerated image
+                # You need to implement this part based on your model structure
+                # For example: RegeneratedImage.objects.filter(parent_image=image).delete()
+                return JsonResponse({'Message': 'Image deleted successfully.'})
+            except Image.DoesNotExist:
+                return JsonResponse({'Message': 'Image not found.'}, status=404)
+        else:
+            return JsonResponse({'Message': 'User Not Found'}, status=403)
+
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UpdateImageView(View):
+    @csrf_exempt
+    #@login_required
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request):
+        image_id = request.POST.get('image_id')
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if user:
+            try:
+                image = Image.objects.get(id=image_id, user=user)
+                if 'frequency' in request.POST:
+                    image.frequency = request.POST['frequency']
+                if 'prompt' in request.POST:
+                    image.prompt = request.POST['prompt']
+                if 'frequency_type' in request.POST:
+                    image.frequency_type = request.POST['frequency_type']
+                if 'public' in request.POST:
+                    image.public = request.POST['public']
+
+                # Check if new image data is provided
+                new_image_data = request.FILES.get('photo')
+                # if new_image_data:
+                #     image.photo.save(new_image_data.name, new_image_data, save=True)
+
+                if new_image_data:
+                    image.photo = new_image_data
+
+                # Save the updated image object
+                image.save()
+                return JsonResponse({'Message': 'Image details updated successfully.'})
+            except Image.DoesNotExist:
+                return JsonResponse({'Message': 'Image not found.'}, status=404)
+        else:
+            return JsonResponse({'Message': 'User Not Found'}, status=403)
+
+
+
+
 
 
 class DashboardView(View):
@@ -522,11 +595,11 @@ class DashboardView(View):
         img = Image.objects.all()
         return render(request, "myapp/dashboard.html", {"img": img})
 
-class DeleteImageView(View):
-    def get(self, request, id):
-        img = Image.objects.get(id=id)
-        img.delete()
-        return redirect('/dashboard/')
+# class DeleteImageView(View):
+#     def get(self, request, id):
+#         img = Image.objects.get(id=id)
+#         img.delete()
+#         return redirect('/dashboard/')
 
 class SuperDashboardView(View):
     def get(self, request):

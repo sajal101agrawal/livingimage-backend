@@ -93,6 +93,7 @@ class CustomUser(AbstractUser,TimeStampModel):
 #-----------------------------------------------------Code BY Adil-------------------------------------------------------------
 
 class History(TimeStampModel):
+    id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     image_data = models.ImageField(upload_to="myimage")
     # membership = models.CharField(max_length=25)

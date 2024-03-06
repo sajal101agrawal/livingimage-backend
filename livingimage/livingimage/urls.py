@@ -5,8 +5,9 @@ from django.conf.urls.static import static
 from home.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/update/',UpdateImageView.as_view(),  name="update_image"),
     path('api/upload/',UploadImageView.as_view(),  name="upload_image"),
-    path('api/delete/<id>/',DeleteImageView.as_view(), name="delete_image"), # For admin
+    path('api/delete/',DeleteImageView.as_view(), name="delete_image"), # For admin
     # path('update/<id>/',update_image, name="update_image"), # For admin
     path('api/superdashboard/',SuperDashboardView.as_view(), name="superdashboard"), # For admin
     path('api/dashboard/',DashboardView.as_view(), name="dashboard"), # For admin
