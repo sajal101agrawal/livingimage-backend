@@ -18,7 +18,7 @@ from django.http import JsonResponse
 
 # Create your views here.
 
-#----------------------Code copied from Keywordlit Project--------------------------------------------------------------
+#----------------------Code copied from Keywordlit Project----------------------------------------------------------------
 
 def IsSuperUser(user_id):
     user = CustomUser.objects.filter(id=user_id)
