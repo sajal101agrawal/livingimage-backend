@@ -15,7 +15,7 @@ from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
 from .renderers import UserRenderer
 from django.views import View
 from django.http import JsonResponse
-
+import os
 # Create your views here.
 
 #----------------------Code copied from Keywordlit Project----------------------------------------------------------------
@@ -261,7 +261,7 @@ class UserProfileView(APIView):
         user = CustomUser.objects.filter(id=user_id).first()
         #print("the user is",user.email)
         image_count=0
-        for history in History.objects.filter(user=user) :
+        for history in Image.objects.filter(user=user) :
 #-------------------------Code to fetch the error in the section---------------------------------------------------
             # try:
             #     # Attempt to load the JSON data, replacing single quotes with double quotes
@@ -278,7 +278,7 @@ class UserProfileView(APIView):
             tmp = {
                 'user' : history.user.email,
                 'image_id' : history.id,
-                'image_data' : history.image_data.url,
+                'image_data' : history.photo.url,
                 'public' : history.public,
                 'prompt' : history.prompt,
                 'frequency_type' : history.frequency_type,#created.strftime("%d/%m/%Y"),
@@ -304,8 +304,8 @@ class UserProfileView(APIView):
         jsonn_response = {
             'personal_data' : serializer.data,
             'Total_Image_count' : image_count,
-            'Image_history' : Image_history,
-            'deposit_history' : diposit_history
+            'Image_data' : Image_history,
+            #'deposit_history' : diposit_history
         }
         response = Response(jsonn_response, status=status.HTTP_200_OK)
         
@@ -532,8 +532,12 @@ class DeleteImageView(View):
         user = CustomUser.objects.filter(id=user_id).first()
         if user:
             try:
-                image = Image.objects.get(id=image_id, user=user)
+                image = Image.objects.get(id=image_id, user=user)              
                 # Delete the image
+                image_path = image.photo.path  # Assuming 'image_field' is the name of the field storing the image
+                # Delete the image file from the media folder
+                if os.path.exists(image_path):
+                    os.remove(image_path)
                 image.delete()
                 # Delete related regenerated image
                 # You need to implement this part based on your model structure
@@ -592,7 +596,7 @@ class UpdateImageView(View):
 
 class DashboardView(View):
     def get(self, request):
-        img = Image.objects.all()
+        img = Image.objects.filter(public=True)
         return render(request, "myapp/dashboard.html", {"img": img})
 
 # class DeleteImageView(View):
@@ -608,33 +612,14 @@ class SuperDashboardView(View):
 
 
 
-
-# def upload_image(request):
-#  if request.method=="POST":
-#   form = ImageForm(request.POST, request.FILES)
-#   if form.is_valid():
-#     form.save()
-#  form = ImageForm()# In this Prompt and Frequency will also Go here
-#  return render(request, 'myapp/upload.html', {'form':form})
-
-
-# def dashboard_view(request):
-#  img = Image.objects.all()
-#  return render(request,"myapp/dashboard.html",{"img":img})
-
-# def delete_image(request, id): # Only Admin Functionality for Now
- 
-#  img=Image.objects.get(id=id)
-#  img.delete()
-#  return redirect('/dashboard/')
-
-
-# # def update_image(request, id): # Only Admin Functionality for Now
- 
-# #  img=Image.objects.get(id=id)
-# #  img.update()
-# #  return redirect('/dashboard/')
-
-# def superdashboard_view(request): # Admin Dashboard Having update and delete button
-#  img = Image.objects.all()
-#  return render(request,"myapp/dashboard.html",{"img":img})
+class UpdateUserDeatilView(APIView):
+    def post(self, request):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if user:
+            if 'name' in request.POST:
+                user.name = request.POST['name']
+            user.save()
+            return Response({'Message': 'User details updated successfully.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'Message': 'No user found.'}, status=status.HTTP_400_BAD_REQUEST)

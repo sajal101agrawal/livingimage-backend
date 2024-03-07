@@ -6,7 +6,7 @@ from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 
 class ImageAdmin(admin.ModelAdmin):
- list_display = ['id', 'photo', 'public', 'prompt', 'frequency_type', 'frequency', 'created', 'updated']
+ list_display = ["user",'id', 'photo', 'public', 'prompt', 'frequency_type', 'frequency', 'created', 'updated']
 
 
 class CustomUserAdmin(UserAdmin):

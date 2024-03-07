@@ -6,6 +6,7 @@ from home.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/update/',UpdateImageView.as_view(),  name="update_image"),
+    path('api/update-user/',UpdateUserDeatilView.as_view(),  name="update_user"),
     path('api/upload/',UploadImageView.as_view(),  name="upload_image"),
     path('api/delete/',DeleteImageView.as_view(), name="delete_image"), # For admin
     # path('update/<id>/',update_image, name="update_image"), # For admin

@@ -138,6 +138,7 @@ class Image(TimeStampModel):
         ('month', 'Month'),
         ('year', 'Year'),
     )
+    id=models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     photo = models.ImageField(upload_to="myimage")
     prompt = models.TextField(max_length=200)
