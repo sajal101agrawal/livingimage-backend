@@ -16,6 +16,7 @@ from .renderers import UserRenderer
 from django.views import View
 from django.http import JsonResponse
 import os
+from django.conf import settings
 # Create your views here.
 
 #----------------------Code copied from Keywordlit Project----------------------------------------------------------------
@@ -501,6 +502,11 @@ class UploadImageView(View):
                 print("frequency_type:", frequency_type)
                 print("photo:", photo)
                 print("public:", public)
+                max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+                    # Check if the size of the uploaded image is less than or equal to the maximum size limit
+                if photo.size > max_size:
+                    return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+
                 form.save()
                 #return redirect('/api/dashboard/')
                 return JsonResponse({'Message': 'Image Upload successful.'})
@@ -519,51 +525,119 @@ class UploadImageView(View):
 
 from django.contrib.auth.decorators import login_required
 
+# # @method_decorator(csrf_exempt, name='dispatch')
+# class DeleteImageView(View):
+#     @csrf_exempt
+#     #@login_required
+#     def dispatch(self, *args, **kwargs):
+#         return super().dispatch(*args, **kwargs)
+
+#     def post(self, request):
+#         image_id = request.POST.get('image_id')
+#         user_id = get_user_id_from_token(request)
+#         user = CustomUser.objects.filter(id=user_id).first()
+#         if user:
+#             try:
+#                 image = Image.objects.get(id=image_id, user=user)              
+#                 # Delete the image
+#                 image_path = image.photo.path  # Assuming 'image_field' is the name of the field storing the image
+#                 # Delete the image file from the media folder
+#                 if os.path.exists(image_path):
+#                     os.remove(image_path)
+#                 image.delete()
+#                 # Delete related regenerated image
+#                 # You need to implement this part based on your model structure
+#                 # For example: RegeneratedImage.objects.filter(parent_image=image).delete()
+#                 return JsonResponse({'Message': 'Image deleted successfully.'})
+#             except Image.DoesNotExist:
+#                 return JsonResponse({'Message': 'Image not found.'}, status=404)
+#         else:
+#             return JsonResponse({'Message': 'User Not Found'}, status=403)
+
+
+
 # @method_decorator(csrf_exempt, name='dispatch')
+# class UpdateImageView(View):
+#     @csrf_exempt
+#     #@login_required
+#     def dispatch(self, *args, **kwargs):
+#         return super().dispatch(*args, **kwargs)
+
+#     def post(self, request):
+#         image_id = request.POST.get('image_id')
+#         user_id = get_user_id_from_token(request)
+#         user = CustomUser.objects.filter(id=user_id).first()
+#         if user:
+#             try:
+#                 image = Image.objects.get(id=image_id, user=user)
+#                 if 'frequency' in request.POST:
+#                     image.frequency = request.POST['frequency']
+#                 if 'prompt' in request.POST:
+#                     image.prompt = request.POST['prompt']
+#                 if 'frequency_type' in request.POST:
+#                     image.frequency_type = request.POST['frequency_type']
+#                 if 'public' in request.POST:
+#                     image.public = request.POST['public']
+
+#                 # Check if new image data is provided
+#                 new_image_data = request.FILES.get('photo')
+#                 # if new_image_data:
+#                 #     image.photo.save(new_image_data.name, new_image_data, save=True)
+
+#                 if new_image_data:
+#                     image.photo = new_image_data
+
+#                 # Save the updated image object
+#                 image.save()
+#                 return JsonResponse({'Message': 'Image details updated successfully.'})
+#             except Image.DoesNotExist:
+#                 return JsonResponse({'Message': 'Image not found.'}, status=404)
+#         else:
+#             return JsonResponse({'Message': 'User Not Found'}, status=403)
+
+@method_decorator(csrf_exempt, name='dispatch')
 class DeleteImageView(View):
     @csrf_exempt
-    #@login_required
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
     def post(self, request):
         image_id = request.POST.get('image_id')
         user_id = get_user_id_from_token(request)
-        user = CustomUser.objects.filter(id=user_id).first()
-        if user:
+        if user_id:
             try:
-                image = Image.objects.get(id=image_id, user=user)              
-                # Delete the image
-                image_path = image.photo.path  # Assuming 'image_field' is the name of the field storing the image
-                # Delete the image file from the media folder
-                if os.path.exists(image_path):
-                    os.remove(image_path)
+                user = CustomUser.objects.get(id=user_id)
+                image = Image.objects.get(id=image_id, user=user)
+
+                # Delete the image file from the S3 bucket
+                image.photo.delete(save=False)
+
+                # Delete the image object from the database
                 image.delete()
-                # Delete related regenerated image
-                # You need to implement this part based on your model structure
-                # For example: RegeneratedImage.objects.filter(parent_image=image).delete()
+
                 return JsonResponse({'Message': 'Image deleted successfully.'})
             except Image.DoesNotExist:
                 return JsonResponse({'Message': 'Image not found.'}, status=404)
+            except CustomUser.DoesNotExist:
+                return JsonResponse({'Message': 'User not found.'}, status=403)
         else:
-            return JsonResponse({'Message': 'User Not Found'}, status=403)
-
-
+            return JsonResponse({'Message': 'User Details not found.'}, status=403)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class UpdateImageView(View):
     @csrf_exempt
-    #@login_required
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
     def post(self, request):
         image_id = request.POST.get('image_id')
         user_id = get_user_id_from_token(request)
-        user = CustomUser.objects.filter(id=user_id).first()
-        if user:
+        if user_id:
             try:
+                user = CustomUser.objects.get(id=user_id)
                 image = Image.objects.get(id=image_id, user=user)
+
+                # Update image details
                 if 'frequency' in request.POST:
                     image.frequency = request.POST['frequency']
                 if 'prompt' in request.POST:
@@ -573,24 +647,31 @@ class UpdateImageView(View):
                 if 'public' in request.POST:
                     image.public = request.POST['public']
 
-                # Check if new image data is provided
+                # Check if a new image file is provided
                 new_image_data = request.FILES.get('photo')
-                # if new_image_data:
-                #     image.photo.save(new_image_data.name, new_image_data, save=True)
-
                 if new_image_data:
-                    image.photo = new_image_data
+
+                    max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+                    # Check if the size of the uploaded image is less than or equal to the maximum size limit
+                    if new_image_data.size > max_size:
+                        return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+                    # Delete the old image file from S3
+                    if image.photo:
+                        image.photo.delete(save=False)
+                    # Continue processing the uploaded image
+                    # Save the new image file to the model
+                    image.photo.save(new_image_data.name, new_image_data, save=True)
 
                 # Save the updated image object
                 image.save()
+
                 return JsonResponse({'Message': 'Image details updated successfully.'})
             except Image.DoesNotExist:
                 return JsonResponse({'Message': 'Image not found.'}, status=404)
+            except CustomUser.DoesNotExist:
+                return JsonResponse({'Message': 'User not found.'}, status=403)
         else:
-            return JsonResponse({'Message': 'User Not Found'}, status=403)
-
-
-
+            return JsonResponse({'Message': 'User Details not found.'}, status=403)
 
 
 

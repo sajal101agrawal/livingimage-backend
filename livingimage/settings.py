@@ -190,3 +190,19 @@ LOGOUT_REDIRECT_URL = "home"
 
 STRIPE_PUBLIC_KEY = 'pk_test_51OmR7LFgeSLbzlIVe6lKlJwhv4nI5maN5gXJLqxbXmW8QCjLUGtAEqRPxccgEODRdhl8T83Df432Wn4j7kQrImCj00foTgjwyA'
 STRIPE_SECRET_KEY = 'sk_test_51OmR7LFgeSLbzlIV4PWYM8azw8RoCk86r1YrmaQYGJsueGVkvY8jHcQsxZgNiOvrAzLJREhwm6lJm7R8fLuwfwte00gRgjL3Nb'
+
+
+
+AWS_ACCESS_KEY_ID = 'AKIAZI2LGNXL5IGNROWH'
+AWS_SECRET_ACCESS_KEY = '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'
+AWS_STORAGE_BUCKET_NAME = 'livingimage-original-images'
+AWS_S3_SIGNATURE_NAME = 's3v4',
+AWS_S3_REGION_NAME = 'us-east-1'
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL =  None
+AWS_S3_VERIFY = True
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+
+# Set the maximum size for in-memory file uploads to 20 MB (20 * 1024 * 1024 bytes)
+MAX_IMAGE_SIZE_MB = 20
