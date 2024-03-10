@@ -60,11 +60,6 @@ class CustomUser(AbstractUser,TimeStampModel):
     """ 
     This models is create to store and edit the New registered User's Data and edit Django defualt User authentication 
     """
-    GENDER = (
-        ('MALE', 'MALE'),
-        ('FEMALE', 'FEMALE'),
-        ('CUSTOM', 'CUSTOM'),
-    )
 
     id = models.BigAutoField(primary_key=True)
     email = models.EmailField(unique=True)
@@ -93,6 +88,11 @@ class CustomUser(AbstractUser,TimeStampModel):
 #-----------------------------------------------------Code BY Adil-------------------------------------------------------------
 
 class History(TimeStampModel):
+    tag_choice =(
+        ('update','update'),
+        ('delete','delete'),
+        ('create','create'),
+    )
     id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     image_data = models.ImageField(upload_to="myimage")
@@ -101,6 +101,7 @@ class History(TimeStampModel):
     frequency_type = models.CharField(max_length=25)
     frequency = models.IntegerField()
     public = models.BooleanField(default=False)
+    tag = models.CharField(max_length=255,choices=tag_choice,default='create')
 
 
 
@@ -146,18 +147,34 @@ class Image(TimeStampModel):
     frequency = models.IntegerField(validators=[MinValueValidator(1)])
     public = models.BooleanField(default=False)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)  # Call the parent class's save() method
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)  # Call the parent class's save() method
 
-        # Save image data to History
-        History.objects.create(
-            user=self.user,  # Assuming you have a user field in the Image model
-            image_data=self.photo,
-            prompt=self.prompt,
-            frequency_type=self.frequency_type,
-            frequency=self.frequency,
-            public=self.public
-        )
+    #     # Save image data to History
+    #     History.objects.create(
+    #         user=self.user,  # Assuming you have a user field in the Image model
+    #         image_data=self.photo,
+    #         prompt=self.prompt,
+    #         frequency_type=self.frequency_type,
+    #         frequency=self.frequency,
+    #         public=self.public
+    #     )
+
+
+class RegeneratedImage(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    original_image_id = models.PositiveIntegerField()
+    original_image_name = models.CharField(max_length=255)
+    public = models.BooleanField(default=False)  # Field from the original image model
+    regenerated_image = models.ImageField(upload_to="regenerated_images")
+    regenerated_at = models.DateTimeField(null=True, blank=True)  # Null initially, updated when regenerated image is uploaded
+    nextregeneration_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Regenerated Image {self.id} for User {self.user.email}"
+
+
 
 
  

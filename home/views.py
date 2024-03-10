@@ -17,6 +17,11 @@ from django.views import View
 from django.http import JsonResponse
 import os
 from django.conf import settings
+from PIL import Image as PILImage
+from io import BytesIO
+import boto3
+from django.core.files.storage import default_storage
+from botocore.exceptions import ClientError
 # Create your views here.
 
 #----------------------Code copied from Keywordlit Project----------------------------------------------------------------
@@ -49,50 +54,6 @@ def get_tokens_for_user(user):
         'access': str(refresh.access_token),
     }
       
-
-# class UserRegistrationView(APIView):
-#     """ 
-#     An api view for user registration and return error if these is any error or not provided insufficient data
-#     """
-#     renderer_classes = [UserRenderer]
-#     def post(self, request, format=None):
-#         if not 'username' in request.data :
-#             while True :
-#                 genrated_random_username =  generate_random_string(15)
-#                 if CustomUser.objects.filter(username=genrated_random_username).count() == 0 :
-#                     request.data['username'] = genrated_random_username
-#                     break
-#         serializer = UserRegistrationSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         if not request.data['email'] :
-#             return Response({'Message':'email field is required'}, status=status.HTTP_400_BAD_REQUEST)
-#         user = serializer.save()
-#         if 'super' in request.data and request.data['super'] is True : 
-#             user.is_superuser = True
-#             user.save()
-#         #token = get_tokens_for_user(user)
-#         verification_code = random.randint(100000,999999)
-#         user.verification_code = verification_code
-#         user.save()
-
-#         # subject = 'Verification code is here'
-#         # message = f'verification code : {verification_code}'
-#         # from_email = 'info@keywordlit.com'
-#         # recipient_list = [user.email]   
-
-#         # send_mail(subject, message, from_email, recipient_list)            
-#         # #return Response({'token':token, "email" : 'email verification code has been set' ,'msg':'Registration succesful'}, status=status.HTTP_201_CREATED)
-#         # return Response({"email" : 'Email verification code has been set' ,'Message':'Verify your account'}, status=status.HTTP_201_CREATED)
-
-#         try:
-#             send_otp_via_email(user.email)  # Use your send_otp_via_email function
-#         except ValidationError as e:
-#             return Response({'Message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-#         return Response({"email": 'Email verification code has been set', 'Message': 'Verify your account'},
-#                         status=status.HTTP_201_CREATED)
-
-
 
 
 class UserRegistrationView(APIView):
@@ -316,39 +277,6 @@ class UserProfileView(APIView):
         return response
 
 
-# class UserModifyPasswordView(APIView):
-#     """ 
-#     Change Existing user password
-#     """
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request, format=None):
-#       user_id = get_user_id_from_token(request)
-#       user = CustomUser.objects.filter(id=user_id).first()
-#       print("the user is",user.email)
-#       serializer = UserModifyPasswordSerializer(data=request.data)
-#       serializer.is_valid(raise_exception=True)
-      
-#       if user.is_user_verified:
-#         if not request.data.get('old_password'):
-#             return Response({'Message': 'Old Password is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         if not request.data.get('new_password'):
-#             return Response({'Message': 'New Password is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         is_superuser = request.data.get('super', False)
-#         if is_superuser:
-#             user = CustomUser.objects.create_superuser(**serializer.validated_data)
-#             user.is_user_verified = True  # ALL superuser are verified
-#             user.save()
-#             return Response({"email": 'Email is verified', 'Message': 'Admin user Created'},
-#                             status=status.HTTP_201_CREATED)
-#       else:
-#           return Response({'Message': 'Email is not verified!'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
 class UserModifyPasswordView(APIView):
     """ 
     Change existing user password.
@@ -507,6 +435,16 @@ class UploadImageView(View):
                 if photo.size > max_size:
                     return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
 
+                History.objects.create(
+                    tag='create',
+                    user=user,
+                    image_data=photo,
+                    prompt=prompt,
+                    frequency_type=frequency_type,
+                    frequency=frequency,
+                    public=public
+                )
+
                 form.save()
                 #return redirect('/api/dashboard/')
                 return JsonResponse({'Message': 'Image Upload successful.'})
@@ -525,77 +463,45 @@ class UploadImageView(View):
 
 from django.contrib.auth.decorators import login_required
 
-# # @method_decorator(csrf_exempt, name='dispatch')
+
+#@method_decorator(csrf_exempt, name='dispatch')
 # class DeleteImageView(View):
 #     @csrf_exempt
-#     #@login_required
 #     def dispatch(self, *args, **kwargs):
 #         return super().dispatch(*args, **kwargs)
 
 #     def post(self, request):
 #         image_id = request.POST.get('image_id')
 #         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         if user:
+#         if user_id:
 #             try:
-#                 image = Image.objects.get(id=image_id, user=user)              
-#                 # Delete the image
-#                 image_path = image.photo.path  # Assuming 'image_field' is the name of the field storing the image
-#                 # Delete the image file from the media folder
-#                 if os.path.exists(image_path):
-#                     os.remove(image_path)
+#                 user = CustomUser.objects.get(id=user_id)
+#                 image = Image.objects.get(id=image_id, user=user)
+
+#                 # Delete the image file from the S3 bucket
+#                 image.photo.delete(save=False)
+                
+#                 History.objects.create(
+#                     tag='delete',
+#                     user=user,
+#                     image_data=image.photo,
+#                     prompt=image.prompt,
+#                     frequency_type=image.frequency_type,
+#                     frequency=image.frequency,
+#                     public=image.public
+#                 )
+
+#                 # Delete the image object from the database
 #                 image.delete()
-#                 # Delete related regenerated image
-#                 # You need to implement this part based on your model structure
-#                 # For example: RegeneratedImage.objects.filter(parent_image=image).delete()
+
 #                 return JsonResponse({'Message': 'Image deleted successfully.'})
 #             except Image.DoesNotExist:
 #                 return JsonResponse({'Message': 'Image not found.'}, status=404)
+#             except CustomUser.DoesNotExist:
+#                 return JsonResponse({'Message': 'User not found.'}, status=403)
 #         else:
-#             return JsonResponse({'Message': 'User Not Found'}, status=403)
+#             return JsonResponse({'Message': 'User Details not found.'}, status=403)
 
-
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class UpdateImageView(View):
-#     @csrf_exempt
-#     #@login_required
-#     def dispatch(self, *args, **kwargs):
-#         return super().dispatch(*args, **kwargs)
-
-#     def post(self, request):
-#         image_id = request.POST.get('image_id')
-#         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         if user:
-#             try:
-#                 image = Image.objects.get(id=image_id, user=user)
-#                 if 'frequency' in request.POST:
-#                     image.frequency = request.POST['frequency']
-#                 if 'prompt' in request.POST:
-#                     image.prompt = request.POST['prompt']
-#                 if 'frequency_type' in request.POST:
-#                     image.frequency_type = request.POST['frequency_type']
-#                 if 'public' in request.POST:
-#                     image.public = request.POST['public']
-
-#                 # Check if new image data is provided
-#                 new_image_data = request.FILES.get('photo')
-#                 # if new_image_data:
-#                 #     image.photo.save(new_image_data.name, new_image_data, save=True)
-
-#                 if new_image_data:
-#                     image.photo = new_image_data
-
-#                 # Save the updated image object
-#                 image.save()
-#                 return JsonResponse({'Message': 'Image details updated successfully.'})
-#             except Image.DoesNotExist:
-#                 return JsonResponse({'Message': 'Image not found.'}, status=404)
-#         else:
-#             return JsonResponse({'Message': 'User Not Found'}, status=403)
-
-@method_decorator(csrf_exempt, name='dispatch')
 class DeleteImageView(View):
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
@@ -610,20 +516,46 @@ class DeleteImageView(View):
                 image = Image.objects.get(id=image_id, user=user)
 
                 # Delete the image file from the S3 bucket
-                image.photo.delete(save=False)
+                s3_key = image.photo.name
+                if default_storage.exists(s3_key):
+                    default_storage.delete(s3_key)
 
-                # Delete the image object from the database
-                image.delete()
+                    # Create a history record before deleting the image object
+                    History.objects.create(
+                        tag='delete',
+                        user=user,
+                        image_data=image.photo,
+                        prompt=image.prompt,
+                        frequency_type=image.frequency_type,
+                        frequency=image.frequency,
+                        public=image.public
+                    )
 
-                return JsonResponse({'Message': 'Image deleted successfully.'})
+                    # Delete the image object from the database
+                    image.delete()
+
+                    return JsonResponse({'Message': 'Image deleted successfully.'})
+                else:
+                    return JsonResponse({'Message': 'Image not found.'}, status=404)
             except Image.DoesNotExist:
                 return JsonResponse({'Message': 'Image not found.'}, status=404)
             except CustomUser.DoesNotExist:
                 return JsonResponse({'Message': 'User not found.'}, status=403)
+            except ClientError as e:
+                return JsonResponse({'Message': f'An error occurred: {str(e)}'}, status=500)
         else:
             return JsonResponse({'Message': 'User Details not found.'}, status=403)
 
-@method_decorator(csrf_exempt, name='dispatch')
+
+
+
+
+
+
+
+
+
+#@method_decorator(csrf_exempt, name='dispatch')
 class UpdateImageView(View):
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
@@ -660,9 +592,18 @@ class UpdateImageView(View):
                         image.photo.delete(save=False)
                     # Continue processing the uploaded image
                     # Save the new image file to the model
+                    #image.photo.save(new_image_data, new_image_data, save=True)
                     image.photo.save(new_image_data.name, new_image_data, save=True)
-
+                    
                 # Save the updated image object
+                History.objects.create(
+                    tag='update',
+                    user=user,
+                    image_data=image.photo,
+                    prompt=image.prompt,
+                    frequency_type=image.frequency_type,
+                    frequency=image.frequency,
+                    public=image.public)
                 image.save()
 
                 return JsonResponse({'Message': 'Image details updated successfully.'})
@@ -680,11 +621,6 @@ class DashboardView(View):
         img = Image.objects.filter(public=True)
         return render(request, "myapp/dashboard.html", {"img": img})
 
-# class DeleteImageView(View):
-#     def get(self, request, id):
-#         img = Image.objects.get(id=id)
-#         img.delete()
-#         return redirect('/dashboard/')
 
 class SuperDashboardView(View):
     def get(self, request):
@@ -704,3 +640,76 @@ class UpdateUserDeatilView(APIView):
             return Response({'Message': 'User details updated successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'Message': 'No user found.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+from datetime import datetime, timedelta
+
+class RegenerateImageView(View):
+    def regen_image(self, request):
+        # Retrieve image ID from the request data
+        image_id = request.POST.get('image_id')
+        # Get user ID from the request (assuming you have authentication implemented)
+        user_id = get_user_id_from_token(request)
+        if user_id:
+            try:
+                # Fetch the original image details from the database
+                original_image = Image.objects.get(id=image_id, user__id=user_id)
+                # Apply your regeneration logic here
+                regenerated_image = self.regenerate_image_logic(original_image)
+                # Calculate the regenerative_at datetime based on frequency and frequency_type
+                regenerative_at = self.calculate_regenerative_at(original_image)
+                # Save the regenerated image to S3 and database
+                user = CustomUser.objects.filter(id=user_id).first()
+                self.save_to_s3(regenerated_image, original_image, user, regenerative_at)
+                return JsonResponse({'message': 'Regenerated image saved successfully'}, status=200)
+            except Image.DoesNotExist:
+                return JsonResponse({'error': 'Image not found'}, status=404)
+        else:
+            return JsonResponse({'error': 'User not authenticated'}, status=401)
+
+    def regenerate_image_logic(self, original_image):
+        # Implement your regeneration logic here
+        # For example, you can use PIL to apply transformations to the original image
+        # Here's a simple example:
+        regenerated_image_data = original_image.photo.read()  # Read the binary data of the original image
+        regenerated_image = PILImage.open(BytesIO(regenerated_image_data))  # Open the image using PIL
+        # Apply any desired transformations (e.g., resizing, filtering, etc.)
+        # Example: regenerated_image = regenerated_image.resize((new_width, new_height))
+        return regenerated_image
+
+    def calculate_regenerative_at(self, original_image):
+        # Calculate the next regenerative_at datetime based on frequency and frequency_type
+        frequency = original_image.frequency
+        frequency_type = original_image.frequency_type
+        if frequency_type == 'day':
+            regenerative_at = datetime.now() + timedelta(days=frequency)
+        elif frequency_type == 'week':
+            regenerative_at = datetime.now() + timedelta(weeks=frequency)
+        elif frequency_type == 'month':
+            regenerative_at = datetime.now() + timedelta(days=30 * frequency)
+        elif frequency_type == 'year':
+            regenerative_at = datetime.now() + timedelta(days=365 * frequency)
+        else:
+            # Handle unsupported frequency_type
+            regenerative_at = None
+        return regenerative_at
+
+    def save_to_s3(self, image, original_image, user, regenerative_at):
+        # Connect to your S3 bucket using Boto3
+        s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+        original_image_name=original_image.url.split(".png")[0].split('/')[-1]
+        # Convert the regenerated image to binary data
+        with BytesIO() as buffer:
+            image.save(buffer, format='PNG')  # Adjust the format as needed
+            buffer.seek(0)
+            # Upload the binary data to your S3 bucket
+            s3.upload_fileobj(buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')  # Adjust the filename as needed
+        # Save the regenerated image details to the database
+        regenerated_image = RegeneratedImage.objects.create(
+            user=user,
+            original_image_name=original_image_name,
+            regenerated_image=f'regenerated_image_{original_image_name}.png',
+            regenerative_at=datetime.now(),
+            public=original_image.public,
+            nextregeneration_at=regenerative_at)
+        # Optionally, perform any additional processing or logging

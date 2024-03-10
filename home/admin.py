@@ -17,7 +17,7 @@ class CustomUserAdmin(UserAdmin):
 
 
 class HistoryAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'image_data', 'public', 'frequency_type', 'frequency', 'created', 'updated']
+    list_display = ['id', 'user', 'image_data', 'public', 'frequency_type', 'frequency', 'created', 'updated','tag']
     search_fields = ['user__username', 'created']
     list_filter = ['public', 'created']
 
