@@ -457,23 +457,31 @@ class UploadImageView(View):
                 if photo.size > max_size:
                     return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
 
+
                 # Calculate next regeneration datetime
                 next_regeneration_at = calculate_regeneration_time(frequency, frequency_type)
-
+                image_name=generate_random_string(15)
+                # Save the image file to S3 with the desired file name
+                file_name = f"{image_name}.jpg"  # Assuming the image format is JPG
+                file_path = default_storage.save(file_name, photo)
                 # Save the form data
                 image_instance = form.save(commit=False)
                 image_instance.nextregeneration_at = next_regeneration_at
+                image_instance.image_name=image_name
+                image_instance.photo=file_path
                 image_instance.save()
+               
 
 
                 History.objects.create(
                     tag='create',
                     user=user,
-                    image_data=photo,
+                    image_data=file_path,
                     prompt=prompt,
                     frequency_type=frequency_type,
                     frequency=frequency,
-                    public=public
+                    public=public,
+                    image_name=image_name
                 )
 
                 #form.save()
@@ -507,7 +515,7 @@ class DeleteImageView(View):
             try:
                 user = CustomUser.objects.get(id=user_id)
                 image = Image.objects.get(id=image_id, user=user)
-
+                image_name=image.image_name
                 # Delete the image file from the S3 bucket
                 s3_key = image.photo.name
                 if default_storage.exists(s3_key):
@@ -521,7 +529,8 @@ class DeleteImageView(View):
                         prompt=image.prompt,
                         frequency_type=image.frequency_type,
                         frequency=image.frequency,
-                        public=image.public
+                        public=image.public,
+                        image_name=image_name
                     )
 
                     # Delete the image object from the database
@@ -561,7 +570,7 @@ class UpdateImageView(View):
             try:
                 user = CustomUser.objects.get(id=user_id)
                 image = Image.objects.get(id=image_id, user=user)
-
+                image_name=image.image_name
                 # Update image details
                 if 'frequency' in request.POST:
                     image.frequency = request.POST['frequency']
@@ -581,12 +590,15 @@ class UpdateImageView(View):
                     if new_image_data.size > max_size:
                         return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
                     # Delete the old image file from S3
-                    if image.photo:
-                        image.photo.delete(save=False)
-                    # Continue processing the uploaded image
-                    # Save the new image file to the model
-                    #image.photo.save(new_image_data, new_image_data, save=True)
-                    image.photo.save(new_image_data.name, new_image_data, save=True)
+                    # if image.photo:
+                    #     image.photo.delete(save=False)
+                    # # Continue processing the uploaded image
+                    # # Save the new image file to the model
+                    # #image.photo.save(new_image_data, new_image_data, save=True)
+                    # image.photo.save(new_image_data.name, new_image_data, save=True)
+                    #image.photo = new_image_data
+                    image.photo.save(image.image_name, new_image_data, save=True)
+                    #image.save()
                     
                 # Calculate next regeneration datetime if both frequency and frequency_type are provided
                 if 'frequency' in request.POST and 'frequency_type' in request.POST:
@@ -600,7 +612,8 @@ class UpdateImageView(View):
                     prompt=image.prompt,
                     frequency_type=image.frequency_type,
                     frequency=image.frequency,
-                    public=image.public)
+                    public=image.public,
+                    image_name=image_name)
                 image.save()
 
                 return JsonResponse({'Message': 'Image details updated successfully.'})
@@ -698,7 +711,7 @@ class RegenerateImageView(View):
     def save_to_s3(self, image, original_image, user, regenerative_at):
         # Connect to your S3 bucket using Boto3
         s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
-        original_image_name=original_image.url.split(".png")[0].split('/')[-1]
+        original_image_name=original_image.image_name
         # Convert the regenerated image to binary data
         with BytesIO() as buffer:
             image.save(buffer, format='PNG')  # Adjust the format as needed

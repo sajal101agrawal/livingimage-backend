@@ -18,7 +18,7 @@ def get_user_id_from_token(request):
             print(f"Error decoding token: {e}")
     return None 
 
-def generate_random_string(length=10):
+def generate_random_string(length=15):
     import random, string
     # Define the characters you want to include in the random string
     characters = string.ascii_letters 

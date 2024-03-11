@@ -6,7 +6,7 @@ from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 
 class ImageAdmin(admin.ModelAdmin):
- list_display = ["user",'id', 'photo', 'public', 'prompt', 'frequency_type', 'frequency', 'created', 'updated','regenerated_at','nextregeneration_at']
+ list_display = ["user",'id', 'photo', 'image_name', 'public', 'prompt', 'frequency_type', 'frequency', 'created', 'updated','regenerated_at','nextregeneration_at']
 
 
 class CustomUserAdmin(UserAdmin):
@@ -17,7 +17,7 @@ class CustomUserAdmin(UserAdmin):
 
 
 class HistoryAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'image_data', 'public', 'frequency_type', 'frequency', 'created', 'updated','tag']
+    list_display = ['id', 'user', 'image_data', 'public', 'frequency_type', 'frequency', 'created', 'updated','tag','image_name']
     search_fields = ['user__username', 'created']
     list_filter = ['public', 'created']
 
