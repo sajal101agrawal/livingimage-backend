@@ -155,3 +155,31 @@ class UserModifyPasswordSerializer(serializers.Serializer):
         instance.set_password(validated_data['new_password'])
         instance.save()
         return instance
+    
+
+#---------------------------------------------------Credit Pricing Serializer------------------------------------------------------
+from .models import CreditPricing
+
+class CreditPricingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CreditPricing
+        fields = ['price']
+#---------------------------------------------------Credit Pricing Serializer------------------------------------------------------
+        
+
+        
+#---------------------------------------------------PAYMENT Serializer------------------------------------------------------
+
+#---------------------------------------------------PAYMENT Serializer------------------------------------------------------
+from .models import PaymentRecord, CreditHistory
+
+class PaymentRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentRecord
+        fields = '__all__'
+
+class CreditHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CreditHistory
+        fields = '__all__'        
+#---------------------------------------------------PAYMENT Serializer------------------------------------------------------

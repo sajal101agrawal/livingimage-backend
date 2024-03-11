@@ -138,6 +138,8 @@ class Image(TimeStampModel):
         ('day', 'Day'),
         ('month', 'Month'),
         ('year', 'Year'),
+        ('hour', 'Hour'),
+        ('minute', 'Minute'),
     )
     id=models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
@@ -146,6 +148,8 @@ class Image(TimeStampModel):
     frequency_type = models.CharField(max_length=25, choices=frequency_type_choice)
     frequency = models.IntegerField(validators=[MinValueValidator(1)])
     public = models.BooleanField(default=False)
+    regenerated_at = models.DateTimeField(null=True, blank=True)  # Null initially, updated when regenerated image is uploaded
+    nextregeneration_at = models.DateTimeField()
 
     # def save(self, *args, **kwargs):
     #     super().save(*args, **kwargs)  # Call the parent class's save() method
@@ -176,8 +180,34 @@ class RegeneratedImage(models.Model):
 
 
 
+#---------------------------------------------------Credit Pricing Models-------------------------------------------------------------
+class CreditPricing(models.Model):
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+
+    def __str__(self):
+        return f"Credit Pricing per credit is : {self.price} USD"
+
+#---------------------------------------------------Credit Pricing Models-------------------------------------------------------------
 
  
+#---------------------------------------------------Payment Models-------------------------------------------------------------
+
+class PaymentRecord(models.Model):
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    total_credits = models.IntegerField()
+    date_time = models.DateTimeField()
+    payment_status = models.CharField(max_length=100)
+    payment_id = models.CharField(max_length=100)
+    payment_mode = models.CharField(max_length=100)
+
+class CreditHistory(models.Model):
+    total_credits = models.IntegerField()
+    type_of_transaction = models.CharField(max_length=100)
+    date_time = models.DateTimeField()
+    payment_id = models.CharField(max_length=100)
+    description = models.TextField()
+
+#---------------------------------------------------Payment Models-------------------------------------------------------------
 
 
 # Specify unique related_name attributes for the reverse relationships

@@ -13,6 +13,14 @@ urlpatterns = [
     path('api/superdashboard/',SuperDashboardView.as_view(), name="superdashboard"), # For admin
     path('api/dashboard/',DashboardView.as_view(), name="dashboard"), # For admin
 
+    path('api/credit-pricing/', CreditPricingAPIView.as_view(), name='credit_pricing'), #CREDIT
+    path('api/admin/update-credit-price/', UpdateCreditPricingAPIView.as_view(), name='update_credit_price'),#CREDIT
+    path('api/record-payment/', RecordPaymentAPIView.as_view()), #PAYMENT
+    path('api/get-payment-history/', GetPaymentHistoryAPIView.as_view()), #PAYMENT
+    path('api/get-credit-history/', GetCreditHistoryAPIView.as_view()), #PAYMENT
+
+
+
     path('api/register/', UserRegistrationView.as_view(), name='api-register'),              # From Keywordlit Project
     path('api/verification/', UserEmailVerificationView.as_view(), name='api-verification'), # From Keywordlit Project
     path('api/resendotp/', ResendOTPView.as_view(), name='api-resendotp'),                   # From Keywordlit Project

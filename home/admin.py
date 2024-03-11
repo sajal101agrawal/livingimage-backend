@@ -6,7 +6,7 @@ from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 
 class ImageAdmin(admin.ModelAdmin):
- list_display = ["user",'id', 'photo', 'public', 'prompt', 'frequency_type', 'frequency', 'created', 'updated']
+ list_display = ["user",'id', 'photo', 'public', 'prompt', 'frequency_type', 'frequency', 'created', 'updated','regenerated_at','nextregeneration_at']
 
 
 class CustomUserAdmin(UserAdmin):
@@ -21,6 +21,14 @@ class HistoryAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'created']
     list_filter = ['public', 'created']
 
+
+
+
+
+class CreditPricingAdmin(admin.ModelAdmin):
+    list_display = ['price']
+
+admin.site.register(CreditPricing,CreditPricingAdmin)
 
 admin.site.register(openai_account)
 

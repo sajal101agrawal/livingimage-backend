@@ -22,6 +22,7 @@ from io import BytesIO
 import boto3
 from django.core.files.storage import default_storage
 from botocore.exceptions import ClientError
+import pytz
 # Create your views here.
 
 #----------------------Code copied from Keywordlit Project----------------------------------------------------------------
@@ -382,8 +383,29 @@ class ForgotPasswordView(APIView):
 
 #------------------------------------Forgot Password by Adil---------------------------------------------------------------
     
+# ------------------------------------Regenrative Time Calculate -----------------------------------------------------------------
+def calculate_regeneration_time(frequency,frequency_type):
+        # Calculate the next regenerative_at datetime based on frequency and frequency_type
+        now_utc = datetime.now(pytz.utc)
+        if frequency_type == 'day':
+            regenerative_at = now_utc + timedelta(days=frequency)
+        elif frequency_type == 'week':
+            regenerative_at = now_utc + timedelta(weeks=frequency)
+        elif frequency_type == 'month':
+            regenerative_at = now_utc + timedelta(days=30 * frequency)
+        elif frequency_type == 'year':
+            regenerative_at = now_utc + timedelta(days=365 * frequency)
+        elif frequency_type == 'hour':
+            regenerative_at = now_utc + timedelta(hours= frequency)
+        elif frequency_type == 'minute':
+            regenerative_at = now_utc + timedelta(minutes= frequency)
+        else:
+            # Handle unsupported frequency_type
+            regenerative_at = None
+        return regenerative_at
 
 
+# ------------------------------------Regenrative Time Calculate -----------------------------------------------------------------
 
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
@@ -435,6 +457,15 @@ class UploadImageView(View):
                 if photo.size > max_size:
                     return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
 
+                # Calculate next regeneration datetime
+                next_regeneration_at = calculate_regeneration_time(frequency, frequency_type)
+
+                # Save the form data
+                image_instance = form.save(commit=False)
+                image_instance.nextregeneration_at = next_regeneration_at
+                image_instance.save()
+
+
                 History.objects.create(
                     tag='create',
                     user=user,
@@ -445,7 +476,7 @@ class UploadImageView(View):
                     public=public
                 )
 
-                form.save()
+                #form.save()
                 #return redirect('/api/dashboard/')
                 return JsonResponse({'Message': 'Image Upload successful.'})
             else:
@@ -463,44 +494,6 @@ class UploadImageView(View):
 
 from django.contrib.auth.decorators import login_required
 
-
-#@method_decorator(csrf_exempt, name='dispatch')
-# class DeleteImageView(View):
-#     @csrf_exempt
-#     def dispatch(self, *args, **kwargs):
-#         return super().dispatch(*args, **kwargs)
-
-#     def post(self, request):
-#         image_id = request.POST.get('image_id')
-#         user_id = get_user_id_from_token(request)
-#         if user_id:
-#             try:
-#                 user = CustomUser.objects.get(id=user_id)
-#                 image = Image.objects.get(id=image_id, user=user)
-
-#                 # Delete the image file from the S3 bucket
-#                 image.photo.delete(save=False)
-                
-#                 History.objects.create(
-#                     tag='delete',
-#                     user=user,
-#                     image_data=image.photo,
-#                     prompt=image.prompt,
-#                     frequency_type=image.frequency_type,
-#                     frequency=image.frequency,
-#                     public=image.public
-#                 )
-
-#                 # Delete the image object from the database
-#                 image.delete()
-
-#                 return JsonResponse({'Message': 'Image deleted successfully.'})
-#             except Image.DoesNotExist:
-#                 return JsonResponse({'Message': 'Image not found.'}, status=404)
-#             except CustomUser.DoesNotExist:
-#                 return JsonResponse({'Message': 'User not found.'}, status=403)
-#         else:
-#             return JsonResponse({'Message': 'User Details not found.'}, status=403)
 
 class DeleteImageView(View):
     @csrf_exempt
@@ -595,6 +588,10 @@ class UpdateImageView(View):
                     #image.photo.save(new_image_data, new_image_data, save=True)
                     image.photo.save(new_image_data.name, new_image_data, save=True)
                     
+                # Calculate next regeneration datetime if both frequency and frequency_type are provided
+                if 'frequency' in request.POST and 'frequency_type' in request.POST:
+                    next_regeneration_at = calculate_regeneration_time(image.frequency, image.frequency_type)
+                    image.nextregeneration_at = next_regeneration_at
                 # Save the updated image object
                 History.objects.create(
                     tag='update',
@@ -689,6 +686,10 @@ class RegenerateImageView(View):
             regenerative_at = datetime.now() + timedelta(days=30 * frequency)
         elif frequency_type == 'year':
             regenerative_at = datetime.now() + timedelta(days=365 * frequency)
+        elif frequency_type == 'hour':
+            regenerative_at = datetime.now() + timedelta(hours=1 * frequency)
+        elif frequency_type == 'minute':
+            regenerative_at = datetime.now() + timedelta(minutes=1 * frequency)
         else:
             # Handle unsupported frequency_type
             regenerative_at = None
@@ -713,3 +714,165 @@ class RegenerateImageView(View):
             public=original_image.public,
             nextregeneration_at=regenerative_at)
         # Optionally, perform any additional processing or logging
+
+
+
+class DepositeMoneyAPI(APIView):
+    """ 
+    Get a user profile data with email and password
+    """
+    def post(self, request, format=None):
+        transection_id = 0
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if not user :
+            msg = 'could not diposite in the user account'
+            return Response({ "transection_id":transection_id, "Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if not 'money' in request.data and not request.data['money']:
+            msg = 'could not found the money'
+            return Response({ "transection_id":transection_id, "Message": msg}, status=status.HTTP_400_BAD_REQUEST)
+        transection_id = random.randint(100000000,99999999999)
+        DepositeMoney.objects.create(user=user,Amount= request.data['money'],TransactionId = str(transection_id), method = "CREDIT_CARD", status = "COMPLETE" )
+        
+        msg = 'successfully transection completed !'
+        return Response({ "transection_id":transection_id, "Message": msg}, status=status.HTTP_200_OK)
+    
+class GetDipositeList(APIView):
+    """ 
+    Get-all-user if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if 'TransactionId' in request.data:
+            all_diposite = DepositeMoney.objects.filter(TransactionId=request.data['TransactionId'])
+            if not all_diposite :
+                return Response({'Message' : 'counld not got the diposite', 'TransactionId' : request.data['TransactionId']}, status=status.HTTP_204_NO_CONTENT)
+                
+        else :
+            all_diposite = DepositeMoney.objects.filter()
+            
+        diposite_list = [ 
+                     {
+                         dp.TransactionId : {
+                             "amount" : dp.Amount,
+                             "method" : dp.method,
+                             "status" : dp.status,
+                             "user" : dp.user.email,
+                         } 
+                         } 
+                     for dp in all_diposite ]
+        
+        
+        # diposite_list = [ {c_user.id : { 'email' : c_user.email, 'credit' : c_user.credit, 'fname' : c_user.first_name, "Diposited_balance" : sum([dp_obj.Amount for dp_obj in DepositeMoney.objects.filter(user=c_user)]) if  sum([dp_obj.Amount for dp_obj in DepositeMoney.objects.filter(user=c_user)]) else 0, "search_history" : [ {"hashtag" : search.hashtag, "platform" : search.platform } for search in SearchedHistory.objects.filter(user=c_user)] }} for c_user in all_diposite ]
+        if diposite_list :
+            return Response({'Message' : 'successfully got the user list','userlist' : diposite_list}, status=status.HTTP_200_OK)
+        return Response({'Message' : 'counld not got the user list', 'userlist' : diposite_list}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+#---------------------------------------------------Credit Pricing VIEWS------------------------------------------------------
+
+from .models import CreditPricing
+from .serializers import CreditPricingSerializer
+
+class CreditPricingAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        # user_id = get_user_id_from_token(request)
+        # user, _ = IsSuperUser(user_id)
+        if not user:
+            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        credit_pricing = CreditPricing.objects.first()
+        if not credit_pricing:
+            return Response({"Message": "Credit pricing not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = CreditPricingSerializer(credit_pricing)
+        #return Response(serializer.data )
+        data = serializer.data
+        data['Currency'] = 'USD'  # Add Currency to the response data
+        return Response(data)
+
+class UpdateCreditPricingAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'Could not find the Admin user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            credit_pricing = CreditPricing.objects.first()
+
+            # Check if 'price' is provided in request data
+            price = request.data.get('price')
+            if price is not None:
+                credit_pricing.price = price
+                credit_pricing.save()
+                return Response({'Message': 'Credit pricing updated successfully'})
+            else:
+                return Response({'Message': 'No pricing update available'}, status=status.HTTP_400_BAD_REQUEST)
+            # if not credit_pricing:
+            #     #credit_pricing = CreditPricing.objects.create()
+            #     return Response({"Message": "Credit pricing not found"}, status=status.HTTP_404_NOT_FOUND)
+            # if 'price' or request.POST.get('price'):
+            #     credit_pricing.price = request.data.get('price', credit_pricing.price)
+            #     credit_pricing.save()
+            #     return Response({'Message': 'Credit pricing updated successfully'})
+            # else:
+            #     return Response({'Message': 'No pricing update available'})
+        
+        except Exception as e:
+            return Response({'Message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+#---------------------------------------------------Credit Pricing VIEWS------------------------------------------------------
+        
+#---------------------------------------------------Payment VIEWS------------------------------------------------------
+from .models import PaymentRecord, CreditHistory
+from .serializers import PaymentRecordSerializer, CreditHistorySerializer
+
+class RecordPaymentAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        serializer = PaymentRecordSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GetPaymentHistoryAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        payments = PaymentRecord.objects.all()
+        serializer = PaymentRecordSerializer(payments, many=True)
+        return Response(serializer.data)
+
+class GetCreditHistoryAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        credit_history = CreditHistory.objects.all()
+        serializer = CreditHistorySerializer(credit_history, many=True)
+        return Response(serializer.data)
+#---------------------------------------------------Payment VIEWS------------------------------------------------------
