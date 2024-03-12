@@ -28,6 +28,15 @@ class HistoryAdmin(admin.ModelAdmin):
 class CreditPricingAdmin(admin.ModelAdmin):
     list_display = ['price']
 
+class RegeneratedImageAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'original_image_id', 'original_image_name', 'public', 'regenerated_image', 'regenerated_at', 'nextregeneration_at', 'created', 'updated']
+    search_fields = ['user__username', 'created']
+    list_filter = ['public', 'created']
+
+
+
+admin.site.register(RegeneratedImage,RegeneratedImageAdmin)
+
 admin.site.register(CreditPricing,CreditPricingAdmin)
 
 admin.site.register(openai_account)

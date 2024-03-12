@@ -19,7 +19,7 @@ urlpatterns = [
     path('api/get-payment-history/', GetPaymentHistoryAPIView.as_view()), #PAYMENT
     path('api/get-credit-history/', GetCreditHistoryAPIView.as_view()), #PAYMENT
 
-
+    path('api/regenerate/', RegenerateImageView.as_view()), # REGENERATE IMAGE TEMPORARY as it will be automated
 
     path('api/register/', UserRegistrationView.as_view(), name='api-register'),              # From Keywordlit Project
     path('api/verification/', UserEmailVerificationView.as_view(), name='api-verification'), # From Keywordlit Project

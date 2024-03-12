@@ -167,7 +167,7 @@ class Image(TimeStampModel):
     #     )
 
 
-class RegeneratedImage(models.Model):
+class RegeneratedImage(TimeStampModel):
     id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     original_image_id = models.PositiveIntegerField()
