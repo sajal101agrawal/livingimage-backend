@@ -153,19 +153,6 @@ class Image(TimeStampModel):
     regenerated_at = models.DateTimeField(null=True, blank=True)  # Null initially, updated when regenerated image is uploaded
     nextregeneration_at = models.DateTimeField()
 
-    # def save(self, *args, **kwargs):
-    #     super().save(*args, **kwargs)  # Call the parent class's save() method
-
-    #     # Save image data to History
-    #     History.objects.create(
-    #         user=self.user,  # Assuming you have a user field in the Image model
-    #         image_data=self.photo,
-    #         prompt=self.prompt,
-    #         frequency_type=self.frequency_type,
-    #         frequency=self.frequency,
-    #         public=self.public
-    #     )
-
 
 class RegeneratedImage(TimeStampModel):
     id = models.BigAutoField(primary_key=True)

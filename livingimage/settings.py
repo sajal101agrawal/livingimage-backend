@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework',
     'django_crontab',
-    'corsheaders'
+    'corsheaders',
+    'django_celery_beat',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -207,3 +209,16 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Set the maximum size for in-memory file uploads to 20 MB (20 * 1024 * 1024 bytes)
 MAX_IMAGE_SIZE_MB = 20
+
+# Celery Broker URL
+#CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+
+# Celery Task Serialization Configuration
+CELERY_ACCEPT_CONTENT = ['json']  # Define the accepted content types for tasks
+CELERY_TASK_SERIALIZER = 'json'   # Set the task serializer to JSON
+CELERY_RESULT_SERIALIZER = 'json' # Set the result serializer to JSON
+CELERY_ENABLE_UTC=True
+
+
+CELERY_TIMEZONE = 'UTC'

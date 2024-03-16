@@ -688,22 +688,6 @@ class RegenerateImageView(View):
             return JsonResponse({'error': 'User not authenticated'}, status=401)
 
 
-    # def preprocess_image(self,image_path, target_size=(1024, 1024)):
-    #     print("Hi I AM there : 123")
-    #     # Open the image file
-    #     with Image.open(image_path) as img:
-    #         # Convert image to RGBA mode
-    #         img = img.convert("RGBA")
-    #         # Resize the image
-    #         resized_img = img.resize(target_size)
-    #         # Create a BytesIO object to store the image data
-    #         img_byte_array = io.BytesIO()
-    #         # Save the image to the BytesIO object in PNG format
-    #         resized_img.save(img_byte_array, format="PNG")
-    #         # Get the bytes from the BytesIO object
-    #         processed_image = img_byte_array.getvalue()
-    #     return processed_image
-
     def preprocess_image(self, image_path, target_size=(1024, 1024)):
         from PIL import Image
         import io
