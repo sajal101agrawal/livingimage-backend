@@ -215,10 +215,25 @@ MAX_IMAGE_SIZE_MB = 20
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
 
 # Celery Task Serialization Configuration
-CELERY_ACCEPT_CONTENT = ['json']  # Define the accepted content types for tasks
+CELERY_ACCEPT_CONTENT = ['application/json']  # Define the accepted content types for tasks
 CELERY_TASK_SERIALIZER = 'json'   # Set the task serializer to JSON
 CELERY_RESULT_SERIALIZER = 'json' # Set the result serializer to JSON
 CELERY_ENABLE_UTC=True
 
 
+
+
+CELERY_RESULT_BACKEND = 'django-db'
 CELERY_TIMEZONE = 'UTC'
+#from home.tasks import find_next_regeneration_datetime
+
+# Run this task periodically to check for images that need regeneration
+CELERY_BEAT_SCHEDULE = {
+    'Find_Next_Regen_Datetime': {
+        'task': 'home.tasks.find_next_regeneration_datetime',
+        'schedule': 300,  # Execute every 60 seconds (adjust as needed)
+    },
+}
+
+
+CELERY_TASK_TRACK_STARTED=True

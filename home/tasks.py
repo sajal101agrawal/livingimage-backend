@@ -1,7 +1,8 @@
 # tasks.py
 from livingimage.celery import Celery
-from home.models import *
-from home.views import calculate_regeneration_time
+from celery import shared_task
+#from home.models import *
+# from home.views import calculate_regeneration_time
 from django.conf import settings
 from datetime import datetime
 import boto3
@@ -11,17 +12,28 @@ from openai import OpenAI
 import requests
 from io import BytesIO
 from django.http import JsonResponse
+#import logging
 
 
 app = Celery('tasks', broker='redis://127.0.0.1:6379/0')
 
-from celery import shared_task
+# Set the pool option to 'threads'
+app.conf.update(
+    task_default_queue='default',
+    task_default_exchange='default',
+    task_default_routing_key='default',
+    worker_pool='threads',
+)
+
+# from celery import shared_task
 
 
 
 # @app.task
 # @shared_task
 def regenerate_image(image_id):
+    from home.models import Image, RegeneratedImage, openai_account
+    from home.views import calculate_regeneration_time
 
     # LOGIC FUNCTION
     def preprocess_image(image_path, target_size=(1024, 1024)):
@@ -133,21 +145,103 @@ def regenerate_image(image_id):
     except Image.DoesNotExist:
         return {'Message': 'Image not found'}
 
-# Run this task periodically to check for images that need regeneration
-app.conf.beat_schedule = {
-    'check_images_for_regeneration': {
-        'task': 'tasks.datetime',
-        'schedule': 10,  # Execute every 60 seconds (adjust as needed)
-    },
-}
 
-#@app.task
-# @shared_task
-@app.task
-def datetime():
-    # Query the database for images whose nextregeneration_at time has passed
-    images_to_regenerate = Image.objects.filter(nextregeneration_at__lte=datetime.now(pytz.utc))
+# @app.task#(name="Find_Next_Regen_Datetime")
+# def find_next_regeneration_datetime():
+#     from home.models import Image 
+#     # Query the database for images whose nextregeneration_at time has passed
+#     images_to_regenerate = Image.objects.filter(nextregeneration_at__lte=datetime.now(pytz.utc))
     
-    # Schedule regeneration tasks for each image
-    for image in images_to_regenerate:
-        regenerate_image.apply_async(args=[image.id], countdown=0)  # Execute immediately
+#     # Schedule regeneration tasks for each image
+#     for image in images_to_regenerate:
+#         regenerate_image.apply_async(args=[image.id], countdown=0)  # Execute immediately
+
+# Get the logger
+#logger = logging.getLogger(__name__)
+
+
+
+@shared_task
+def find_next_regeneration_datetime():
+    logger.info("Received task to find next regeneration datetime.")  
+    try:
+        from home.models import Image 
+        from datetime import timedelta
+        images_to_regenerate = Image.objects.all()
+        # # Schedule regeneration tasks for each image
+        # for image in images_to_regenerate:
+        #     # Assuming you have defined a task named 'regenerate_image'
+        #     task = regenerate_image.apply_async(args=[image.id])
+        #     logger.info(f"Scheduled regeneration task for image ID: {image.id}, Task ID: {task.id}")
+
+        return f'Scheduled regeneration tasks for {len(images_to_regenerate)} images'
+    except:
+        return "Error Happend"
+
+
+
+    # Calculate the datetime range for 30 minutes interval      #  IMAGE MODEL OBJECT .ALL RETURN 
+    # now = datetime.now(pytz.utc)
+    # time_before = now - timedelta(minutes=15)
+    # time_after = now + timedelta(minutes=15)
+    
+    # # Query the database for images within the 30 minutes interval
+    # images_to_regenerate = Image.objects.filter(
+    #     nextregeneration_at__gte=time_before,
+    #     nextregeneration_at__lte=time_after
+    # )
+    # logger.info("trying to find Image")
+    
+    # # Schedule regeneration tasks for each image
+    # for image in images_to_regenerate:
+    #     logger.info(f"Scheduling regeneration task for image ID: {image.id}")
+    #     regenerate_image.apply_async(args=[image.id], countdown=0)  # Execute immediately
+
+# @app.task
+# def addi(x,y):
+#     return x+y
+import logging
+
+# Initialize the logger
+logger = logging.getLogger(__name__)
+
+# Set the logging level
+logger.setLevel(logging.INFO)
+
+# Define a handler to control the log output
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+
+# Define a formatter to format the log messages
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(handler)
+
+
+
+
+
+#logger = logging.getLogger(__name__)
+
+# @shared_task
+# def addi(x, y):
+#     logger.info(f"Adding {x} and {y}")
+#     result = x + y
+#     logger.info(f"Result: {result}")
+#     return result
+
+
+
+
+
+
+# @app.task
+# def addi():
+#     lst=[]
+#     for i in range(1,11):
+#         print(i)
+#         lst.append(i)
+        
+#     return "Done"
