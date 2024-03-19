@@ -12,10 +12,12 @@ from openai import OpenAI
 import requests
 from io import BytesIO
 from django.http import JsonResponse
-#import logging
+import logging
 
 
 app = Celery('tasks', broker='redis://127.0.0.1:6379/0')
+# Configure logging to write to a file
+logging.basicConfig(filename='celery.log', level=logging.INFO)
 
 # Set the pool option to 'threads'
 app.conf.update(
@@ -30,7 +32,7 @@ app.conf.update(
 
 
 # @app.task
-# @shared_task
+@shared_task
 def regenerate_image(image_id):
     from home.models import Image, RegeneratedImage, openai_account
     from home.views import calculate_regeneration_time
@@ -90,7 +92,7 @@ def regenerate_image(image_id):
         # Connect to your S3 bucket using Boto3
         s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
         original_image_name=original_image.image_name
-        # Convert the regenerated image to binary data
+        # Convert the regenerated image to binary datas
         # with BytesIO() as buffer:
             # Download the image data from the URL
         image_data = requests.get(image).content
@@ -117,11 +119,6 @@ def regenerate_image(image_id):
 
     # LOGIC FUNCTION
 
-
-    
-
-
-
     try:
         original_image = Image.objects.get(id=image_id)
         # Call the logic to regenerate and save the image here
@@ -137,7 +134,7 @@ def regenerate_image(image_id):
         # Save the regenerated image to S3 and database
         user = original_image.user  #  CustomUser.objects.filter(id=user_id).first()
         save_to_s3(regenerated_image, original_image, user, regenerative_at_)
-        return JsonResponse({'Message': f'Regenerated image {image_id} successfully'}, status=200)
+        return {'Message': f'Regenerated image {image_id} successfully'}
     
         # LOGIC 
 
@@ -157,91 +154,49 @@ def regenerate_image(image_id):
 #         regenerate_image.apply_async(args=[image.id], countdown=0)  # Execute immediately
 
 # Get the logger
-#logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 
 @shared_task
 def find_next_regeneration_datetime():
     logger.info("Received task to find next regeneration datetime.")  
+    # try:
+    #     from home.models import Image 
+    #     from datetime import timedelta
+    #     images_to_regenerate = Image.objects.all()
+    #     # # Schedule regeneration tasks for each image
+    #     # for image in images_to_regenerate:
+    #     #     # Assuming you have defined a task named 'regenerate_image'
+    #     #     task = regenerate_image.apply_async(args=[image.id])
+    #     #     logger.info(f"Scheduled regeneration task for image ID: {image.id}, Task ID: {task.id}")
+
+    #     return f'Scheduled regeneration tasks for {len(images_to_regenerate)} images'
+    # except:
+    #     return "Error Happend"
+
+
     try:
         from home.models import Image 
         from datetime import timedelta
-        images_to_regenerate = Image.objects.all()
-        # # Schedule regeneration tasks for each image
-        # for image in images_to_regenerate:
-        #     # Assuming you have defined a task named 'regenerate_image'
-        #     task = regenerate_image.apply_async(args=[image.id])
-        #     logger.info(f"Scheduled regeneration task for image ID: {image.id}, Task ID: {task.id}")
-
-        return f'Scheduled regeneration tasks for {len(images_to_regenerate)} images'
-    except:
-        return "Error Happend"
-
-
-
-    # Calculate the datetime range for 30 minutes interval      #  IMAGE MODEL OBJECT .ALL RETURN 
-    # now = datetime.now(pytz.utc)
-    # time_before = now - timedelta(minutes=15)
-    # time_after = now + timedelta(minutes=15)
-    
-    # # Query the database for images within the 30 minutes interval
-    # images_to_regenerate = Image.objects.filter(
-    #     nextregeneration_at__gte=time_before,
-    #     nextregeneration_at__lte=time_after
-    # )
-    # logger.info("trying to find Image")
-    
-    # # Schedule regeneration tasks for each image
-    # for image in images_to_regenerate:
-    #     logger.info(f"Scheduling regeneration task for image ID: {image.id}")
-    #     regenerate_image.apply_async(args=[image.id], countdown=0)  # Execute immediately
-
-# @app.task
-# def addi(x,y):
-#     return x+y
-import logging
-
-# Initialize the logger
-logger = logging.getLogger(__name__)
-
-# Set the logging level
-logger.setLevel(logging.INFO)
-
-# Define a handler to control the log output
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-
-# Define a formatter to format the log messages
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-
-# Add the handler to the logger
-logger.addHandler(handler)
-
-
-
-
-
-#logger = logging.getLogger(__name__)
-
-# @shared_task
-# def addi(x, y):
-#     logger.info(f"Adding {x} and {y}")
-#     result = x + y
-#     logger.info(f"Result: {result}")
-#     return result
-
-
-
-
-
-
-# @app.task
-# def addi():
-#     lst=[]
-#     for i in range(1,11):
-#         print(i)
-#         lst.append(i)
+        # Calculate the datetime range for 30 minutes interval      #  IMAGE MODEL OBJECT .ALL RETURN 
+        now = datetime.now(pytz.utc)
+        time_before = now - timedelta(minutes=5)
+        time_after = now + timedelta(minutes=5)
         
-#     return "Done"
+        # Query the database for images within the 30 minutes interval
+        images_to_regenerate = Image.objects.filter(
+            nextregeneration_at__gte=time_before,
+            nextregeneration_at__lte=time_after
+        )
+        logger.info("trying to find Image")
+    
+        # Schedule regeneration tasks for each image
+        for image in images_to_regenerate:
+            logger.info(f"Scheduling regeneration task for image ID: {image.id}")
+            regenerate_image.apply_async(args=[image.id], countdown=0)  # Execute immediately
+        return f'Scheduled regeneration tasks for {len(images_to_regenerate)} images'
+    
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
+        return "An error occurred during regeneration task scheduling."
