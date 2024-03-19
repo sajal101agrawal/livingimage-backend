@@ -31,6 +31,14 @@ urlpatterns = [
     path('api/reset-password/', UserChangePasswordView.as_view(), name='api-resetpassword'),  # Change password is now RESETPASSWORD
     path('api/change-password/', UserModifyPasswordView.as_view(), name='api-changepassword'), # NEW CHANGE PASSOWRD FOR EXISTING USERS
 
+
+    path('api/get-public-original-image/', GetPublicOriginalImage.as_view(), name='GetPublicOriginalImage'), # DONE
+    path('api/get-public-regen-image/', GetPublicRegenrativeImage.as_view(), name='GetPublicRegenrativeImage'), # DONE
+    path('api/get-all-regen-image/', GetAllRegenrativeImage.as_view(), name='GetAllRegenrativeImage'), # DONE
+    path('api/get-all-original-image/', GetAllOriginalImage.as_view(), name='GetAllOriginalImage'), # DONE
+    path('api/get-one-regen-image/', GetOneRegenrativeImage.as_view(), name='GetOneRegenrativeImage'),
+    path('api/get-one-original-image/', GetOneOriginalImage.as_view(), name='GetOneOriginalImage'),
+
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

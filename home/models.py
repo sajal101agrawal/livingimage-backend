@@ -152,6 +152,9 @@ class Image(TimeStampModel):
     public = models.BooleanField(default=False)
     regenerated_at = models.DateTimeField(null=True, blank=True)  # Null initially, updated when regenerated image is uploaded
     nextregeneration_at = models.DateTimeField()
+    user_image_name=models.CharField(max_length=250, null =True, blank =True)
+    tag=models.CharField(max_length=200, null =True, blank =True)
+    description=models.TextField( null =True, blank =True)
 
 
 class RegeneratedImage(TimeStampModel):

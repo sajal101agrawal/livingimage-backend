@@ -270,7 +270,7 @@ class UserProfileView(APIView):
         jsonn_response = {
             'personal_data' : serializer.data,
             'Total_Image_count' : image_count,
-            'Image_data' : Image_history,
+            #'Image_data' : Image_history,
             #'deposit_history' : diposit_history
         }
         response = Response(jsonn_response, status=status.HTTP_200_OK)
@@ -413,6 +413,263 @@ def calculate_regeneration_time(frequency,frequency_type):
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+
+
+#------------------------------------------------Get All Original Image Public TRUE---------------------------------------------
+
+class GetPublicOriginalImage(APIView):
+    def get(self, request):
+        img = Image.objects.filter(public=True)
+        orig_Image_history=[]
+        for images in img:
+            tmp = {
+                'user' : images.user.email,
+                'original_image' : images.photo.url,
+                'public' : images.public,
+                'original_at': images.created.strftime("%d/%m/%Y") if images.created else None,
+            }
+            orig_Image_history.append(tmp)
+
+        jsonn_response = {
+            'Original_Image_data' : orig_Image_history,
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+
+#------------------------------------------------Get All Original Image Public TRUE-------------------------------------
+
+#------------------------------------------------Get All Regenerative Image Public TRUE---------------------------------------------
+
+class GetPublicRegenrativeImage(APIView):
+    def get(self, request):
+        img = RegeneratedImage.objects.filter(public=True)
+        Regen_Image_history=[]
+        for images in img:
+            tmp = {
+                'user' : images.user.email,
+                'regenerated_image' : images.regenerated_image.url,
+                'public' : images.public,
+                'regenerated_at': images.regenerated_at.strftime("%d/%m/%Y") if images.regenerated_at else None,
+            }
+            Regen_Image_history.append(tmp)
+
+        jsonn_response = {
+            'Regenerated_Image_data' : Regen_Image_history,
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+
+#------------------------------------------------Get All Regenerative Image Public TRUE-------------------------------------
+
+
+#------------------------------------------------Get All Regenerative Image-------------------------------------------------
+
+class GetAllRegenrativeImage(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self,request):
+        Regen_Image_history = []
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()    
+        regen_count=0
+        for allregeneratedImage in RegeneratedImage.objects.filter(user=user):
+            tmp = {
+                'user' : allregeneratedImage.user.email,
+                'regenerated_image_id' : allregeneratedImage.id,
+                'regenerated_image' : allregeneratedImage.regenerated_image.url,
+                'original_image_id' : allregeneratedImage.original_image_id,
+                'original_image_name' : allregeneratedImage.original_image_name,
+                'public' : allregeneratedImage.public,
+                # 'prompt' : allregeneratedImage.prompt,
+                # 'frequency_type' : allregeneratedImage.frequency_type,#created.strftime("%d/%m/%Y"),
+                # 'frequency' : allregeneratedImage.frequency,#json.loads(history.result.replace("'", "\"")),
+                'created': allregeneratedImage.created.strftime("%d/%m/%Y"),
+                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y") if allregeneratedImage.regenerated_at else None,
+                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y"),
+            }
+            regen_count+=1
+            Regen_Image_history.append(tmp)
+
+        jsonn_response = {
+            'Regenerated_Image_count' : regen_count,
+            'Regenerated_Image_data' : Regen_Image_history,
+            #'deposit_history' : diposit_history
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+
+#------------------------------------------------Get All Regenerative Image-------------------------------------------------
+    
+
+#------------------------------------------------Get All Original Image-------------------------------------------------
+class GetAllOriginalImage(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+    
+    def post(self,request):
+        Original_Image_history = []
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()    
+        Original_count=0
+        for allOriginalImage in Image.objects.filter(user=user):
+            tmp = {
+                'user' : allOriginalImage.user.email,
+                'original_image_id' : allOriginalImage.id,
+                'original_image_name' : allOriginalImage.image_name,
+                'original_image': allOriginalImage.photo.url,
+                'public' : allOriginalImage.public,
+                'prompt' : allOriginalImage.prompt,
+                # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
+                # 'frequency' : allOriginalImage.frequency,#json.loads(history.result.replace("'", "\"")),
+                'created': allOriginalImage.created.strftime("%d/%m/%Y"),
+                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y") if allOriginalImage.regenerated_at else None,
+                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y"),
+            }
+            Original_count+=1
+            Original_Image_history.append(tmp)
+
+        jsonn_response = {
+            'Original_Image_count' : Original_count,
+            'Original_Image_data' : Original_Image_history,
+            #'deposit_history' : diposit_history
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
+
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+#------------------------------------------------Get All Original Image-------------------------------------------------
+
+
+
+#------------------------------------------------Get SINGLE Regenerative Image-------------------------------------------------
+
+class GetOneRegenrativeImage(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()    
+        if not user:
+            return Response({'Message': 'User Not found.'}, status=status.HTTP_200_OK)
+        image_id=request.data.get('image_id')
+        if not request.data.get('image_id') or not image_id:
+            return Response({'Message': 'Image Id Not found'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            allregeneratedImage = RegeneratedImage.objects.filter(user=user,id=image_id).first()
+            One_Regen_Image = {
+                'user' : allregeneratedImage.user.email,
+                'regenerated_image_id' : allregeneratedImage.id,
+                'regenerated_image' : allregeneratedImage.regenerated_image.url,
+                'original_image_id' : allregeneratedImage.original_image_id,
+                'original_image_name' : allregeneratedImage.original_image_name,
+                'public' : allregeneratedImage.public,
+                # 'prompt' : allregeneratedImage.prompt,
+                # 'frequency_type' : allregeneratedImage.frequency_type,#created.strftime("%d/%m/%Y"),
+                # 'frequency' : allregeneratedImage.frequency,#json.loads(history.result.replace("'", "\"")),
+                'created': allregeneratedImage.created.strftime("%d/%m/%Y"),
+                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y") if allregeneratedImage.regenerated_at else None,
+                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y"),
+            }
+                
+                
+
+            jsonn_response = {
+                'Regenerated_Image_data' : One_Regen_Image,
+                #'deposit_history' : diposit_history
+            }
+            response = Response(jsonn_response, status=status.HTTP_200_OK)
+            # Set the Referrer Policy header
+            response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            return response
+        
+        except:
+            jsonn_response = {
+                'Message' : "No Images Found"
+            }
+            response = Response(jsonn_response, status=status.HTTP_400_BAD_REQUEST)
+            response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            return response
+#------------------------------------------------Get SINGLE Regenerative Image-------------------------------------------------
+    
+
+
+#------------------------------------------------Get SINGLE Original Image-------------------------------------------------
+
+class GetOneOriginalImage(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()    
+        if not user:
+            return Response({'Message': 'User Not found.'}, status=status.HTTP_200_OK)
+        image_id=request.data.get('image_id')
+        if not request.data.get('image_id') or not image_id:
+            return Response({'Message': 'image_id Not found'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:              
+            allOriginalImage = Image.objects.filter(user=user,id=image_id).first()
+            One_Original_Image = {
+                'user' : allOriginalImage.user.email,
+                'original_image_id' : allOriginalImage.id,
+                'original_image_name' : allOriginalImage.image_name,
+                'original_image': allOriginalImage.photo.url,
+                'public' : allOriginalImage.public,
+                'prompt' : allOriginalImage.prompt,
+                # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
+                # 'frequency' : allOriginalImage.frequency,#json.loads(history.result.replace("'", "\"")),
+                'created': allOriginalImage.created.strftime("%d/%m/%Y"),
+                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y") if allOriginalImage.regenerated_at else None,
+                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y"),
+            }
+
+            jsonn_response = {
+                'Original_Image_data' : One_Original_Image,
+                #'deposit_history' : diposit_history
+            }
+            response = Response(jsonn_response, status=status.HTTP_200_OK)
+            
+            # Set the Referrer Policy header
+            response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+            return response
+        
+        except:
+            jsonn_response = {
+                'Message' : "No Images Found"
+            }
+            response = Response(jsonn_response, status=status.HTTP_400_BAD_REQUEST)
+            response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            return response
+#------------------------------------------------Get SINGLE Original Image-------------------------------------------------
+
+
+
 
 
 #----------------------Code copied from Keywordlit Project--------------------------------------------------------------
