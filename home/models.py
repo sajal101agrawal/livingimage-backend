@@ -184,15 +184,19 @@ class CreditPricing(models.Model):
  
 #---------------------------------------------------Payment Models-------------------------------------------------------------
 
-class PaymentRecord(models.Model):
+class PaymentRecord(TimeStampModel):
+    id = models.BigAutoField(primary_key=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     total_credits = models.IntegerField()
     date_time = models.DateTimeField()
     payment_status = models.CharField(max_length=100)
     payment_id = models.CharField(max_length=100)
     payment_mode = models.CharField(max_length=100)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
-class CreditHistory(models.Model):
+class CreditHistory(TimeStampModel):
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     total_credits = models.IntegerField()
     type_of_transaction = models.CharField(max_length=100)
     date_time = models.DateTimeField()
