@@ -49,6 +49,7 @@ urlpatterns = [
     path('api/admin/get-one-regen-admin/', AdminGetOneRegenrativeImage.as_view(), name='AdminGetOneRegenrativeImage'),  # Admin
     path('api/admin/get-one-original-admin/', AdminGetOneOriginalImage.as_view(), name='AdminGetOneOriginalImage'),  # Admin
     path('api/admin/analytics/', AdminAnalytics.as_view(), name='AdminAnalytics'),  # Admin
+    path('api/admin/delete-image/', DeleteImageAdmin.as_view(), name='DeleteImageAdmin'),  # Admin
 
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

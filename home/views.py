@@ -1251,6 +1251,58 @@ class AdminAnalytics(APIView):
 #------------------------------------------------ ADMIN Analytics-------------------------------------------------
 
 
+# -----------------------------------------------ADMIN Delete Original Image ---------------------------------------------------------------
+class DeleteImageAdmin(View):
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if 'image_id' not in request.data or not request.data.get('image_id'):
+            #image_id=request.data.get('image_id')
+            return Response({'Message': 'Image Id Not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        image_id = request.POST.get('image_id')
+        try:
+            image = Image.objects.get(id=image_id)
+            image_name=image.image_name
+            # Delete the image file from the S3 bucket
+            s3_key = image.photo.name
+            if default_storage.exists(s3_key):
+                default_storage.delete(s3_key)
+
+                # Create a history record before deleting the image object
+                History.objects.create(
+                    tag='admin-delete',
+                    user=image.user,
+                    image_data=image.photo,
+                    prompt=image.prompt,
+                    frequency_type=image.frequency_type,
+                    frequency=image.frequency,
+                    public=image.public,
+                    image_name=image_name
+                )
+
+                # Delete the image object from the database
+                image.delete()
+
+                return JsonResponse({'Message': 'Image deleted successfully.'})
+            else:
+                return JsonResponse({'Message': 'Image not found.'}, status=404)
+        except Image.DoesNotExist:
+            return JsonResponse({'Message': 'Image not found.'}, status=404)
+        except ClientError as e:
+            return JsonResponse({'Message': f'An error occurred: {str(e)}'}, status=500)
+
+# -----------------------------------------------ADMIN Delete Original Image ---------------------------------------------------------------
+
+
 # -----------------------------------------------ADMIN API's ---------------------------------------------------------------
 
 #----------------------Code copied from Keywordlit Project--------------------------------------------------------------
