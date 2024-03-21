@@ -676,7 +676,9 @@ class GetOneOriginalImage(APIView):
 
 
 # -----------------------------------------------ADMIN API's ---------------------------------------------------------------
-class GetAllPayments(View):
+from rest_framework.response import Response
+
+class GetAllPayments(APIView):
     """ 
     Get-all-Payment if token is of super user
     """

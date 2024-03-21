@@ -44,11 +44,11 @@ urlpatterns = [
     path('api/get-all-user/', GetAllUsers.as_view(), name='GetAllUsers'),  # Admin
     path('api/delete-user/', DeleteUser.as_view(), name='DeleteUser'),  # Admin
     path('api/view-user/', ViewUser.as_view(), name='ViewUser'),  # Admin
-    path('api/update-user/', UpdateUser.as_view(), name='UpdateUser'),  # Admin
-    path('api/get-all-regen-image/', AdminGetAllRegenrativeImage.as_view(), name='AdminGetAllRegenrativeImage'),  # Admin
-    path('api/get-all-original-image/', AdminGetAllOriginalImage.as_view(), name='AdminGetAllOriginalImage'),  # Admin
-    path('api/get-one-regen-image/', AdminGetOneRegenrativeImage.as_view(), name='AdminGetOneRegenrativeImage'),  # Admin
-    path('api/get-one-original-image/', AdminGetOneOriginalImage.as_view(), name='AdminGetOneOriginalImage'),  # Admin
+    path('api/update-user/', UpdateUser.as_view(), name='UpdateUser'),  # Admin # NOTYET
+    path('api/get-all-regen-admin/', AdminGetAllRegenrativeImage.as_view(), name='AdminGetAllRegenrativeImage'),  # Admin
+    path('api/get-all-original-admin/', AdminGetAllOriginalImage.as_view(), name='AdminGetAllOriginalImage'),  # Admin
+    path('api/get-one-regen-admin/', AdminGetOneRegenrativeImage.as_view(), name='AdminGetOneRegenrativeImage'),  # Admin
+    path('api/get-one-original-admin/', AdminGetOneOriginalImage.as_view(), name='AdminGetOneOriginalImage'),  # Admin
 
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
