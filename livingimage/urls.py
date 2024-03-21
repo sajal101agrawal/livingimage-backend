@@ -14,7 +14,6 @@ urlpatterns = [
     path('api/dashboard/',DashboardView.as_view(), name="dashboard"), # For admin
 
     path('api/credit-pricing/', CreditPricingAPIView.as_view(), name='credit_pricing'), #CREDIT
-    path('api/admin/update-credit-price/', UpdateCreditPricingAPIView.as_view(), name='update_credit_price'),#CREDIT
     path('api/record-payment/', RecordPaymentAPIView.as_view()), #PAYMENT
     path('api/get-payment-history/', GetPaymentHistoryAPIView.as_view()), #PAYMENT
     path('api/get-credit-history/', GetCreditHistoryAPIView.as_view()), #PAYMENT
@@ -39,12 +38,12 @@ urlpatterns = [
     path('api/get-one-regen-image/', GetOneRegenrativeImage.as_view(), name='GetOneRegenrativeImage'),
     path('api/get-one-original-image/', GetOneOriginalImage.as_view(), name='GetOneOriginalImage'),
 
-
+    path('api/update-credit-price/', UpdateCreditPricingAPIView.as_view(), name='update_credit_price'),# Admin CREDIT
     path('api/get-all-payment/', GetAllPayments.as_view(), name='GetAllPayments'),  # Admin  assertion Error
     path('api/get-all-user/', GetAllUsers.as_view(), name='GetAllUsers'),  # Admin
     path('api/delete-user/', DeleteUser.as_view(), name='DeleteUser'),  # Admin
     path('api/view-user/', ViewUser.as_view(), name='ViewUser'),  # Admin
-    path('api/update-user/', UpdateUser.as_view(), name='UpdateUser'),  # Admin # NOTYET
+    path('api/update-user-admin/', AdminUpdateUser.as_view(), name='UpdateUser'),  # Admin # Only Name can be updated
     path('api/get-all-regen-admin/', AdminGetAllRegenrativeImage.as_view(), name='AdminGetAllRegenrativeImage'),  # Admin
     path('api/get-all-original-admin/', AdminGetAllOriginalImage.as_view(), name='AdminGetAllOriginalImage'),  # Admin
     path('api/get-one-regen-admin/', AdminGetOneRegenrativeImage.as_view(), name='AdminGetOneRegenrativeImage'),  # Admin

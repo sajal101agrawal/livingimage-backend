@@ -741,7 +741,7 @@ class GetAllUsers(APIView):
             users_tmp={
             "User ID" :users.id,
             "User Email" :users.email,
-            "User Name"  :users.name,
+            "Name"  :users.name,
             #"Payment Amount" :users.total_amount,
             "Total Credits" :users.credit,
             "Registered on" :users.created.strftime("%d/%m/%Y"),
@@ -915,7 +915,7 @@ class ViewUser(APIView):
         #return Response({'Message' : 'could not find the user details'}, status=status.HTTP_400_BAD_REQUEST)
  
 
-class UpdateUser(APIView):
+class AdminUpdateUser(APIView):
     """ 
     Update-user-details if token is of super user
     """
@@ -934,12 +934,12 @@ class UpdateUser(APIView):
             msg = 'could not found the email'
             return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
         
-        if not 'feild' in request.data and not request.data['feild']:
-            msg = 'could not found the feild which needs to be edited'
-            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+        # if not 'feild' in request.data or not request.data['feild']:
+        #     msg = 'could not found the feild which needs to be edited'
+        #     return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
         
-        if not 'new_value' in request.data and not request.data['new_value']:
-            msg = 'could not found the new value which needs to be replaced with old values'
+        if not 'new_name' in request.data or not request.data['new_name']:
+            msg = 'could not found the new name which needs to be replaced with old name'
             return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
             
         found_user = CustomUser.objects.filter(is_superuser=False,email=request.data['email'])
@@ -947,14 +947,14 @@ class UpdateUser(APIView):
             return Response({'Message' : 'could not got the user'}, status=status.HTTP_204_NO_CONTENT)
 
         found_user = found_user.first()
-        field_name = request.data['feild']
-        new_value = request.data['new_value']
+        #field_name = request.data['feild']
+        new_name = request.data['new_name']
         
-        if field_name != 'name':
-            return Response({'Message' : 'Field name must be "name"'}, status=status.HTTP_400_BAD_REQUEST)
+        # if field_name != 'name':
+        #     return Response({'Message' : 'Field name must be "name"'}, status=status.HTTP_400_BAD_REQUEST)
             
         try:
-            setattr(found_user, field_name, new_value)
+            setattr(found_user, "name", new_name)
             found_user.save()
             msg = 'Successfully edited the user data'
             status_code = status.HTTP_200_OK
@@ -1062,19 +1062,24 @@ class AdminGetAllOriginalImage(APIView):
 class AdminGetOneRegenrativeImage(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     def post(self, request, format=None):
         user_id = get_user_id_from_token(request)
         user, is_superuser = IsSuperUser(user_id)
         if not user or not is_superuser:
             msg = 'could not found the super user'
-            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED) 
+   
+        if 'image_id' not in request.data or not request.data.get('image_id'):
+            return Response({'Message': 'Image Id Not found'}, status=status.HTTP_400_BAD_REQUEST)
         
         image_id=request.data.get('image_id')
-        if not request.data.get('image_id') or not image_id:
-            return Response({'Message': 'Image Id Not found'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            allregeneratedImage = RegeneratedImage.objects.filter(user=user,id=image_id).first()
+            allregeneratedImage = RegeneratedImage.objects.filter(id=image_id).first()
             One_Regen_Image = {
                 'user' : allregeneratedImage.user.email,
                 'regenerated_image_id' : allregeneratedImage.id,
@@ -1115,6 +1120,10 @@ class AdminGetOneOriginalImage(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
 
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
     def post(self, request, format=None):
         user_id = get_user_id_from_token(request)
         user, is_superuser = IsSuperUser(user_id)
@@ -1123,12 +1132,14 @@ class AdminGetOneOriginalImage(APIView):
             msg = 'could not found the super user'
             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
         
+        if 'image_id' not in request.data or not request.data.get('image_id'):
+            #image_id=request.data.get('image_id')
+            return Response({'Message': 'Image Id Not found'}, status=status.HTTP_400_BAD_REQUEST)
         image_id=request.data.get('image_id')
-        if not request.data.get('image_id') or not image_id:
-            return Response({'Message': 'image_id Not found'}, status=status.HTTP_400_BAD_REQUEST)
+        print(image_id)
         
         try:              
-            allOriginalImage = Image.objects.filter(user=user,id=image_id).first()
+            allOriginalImage = Image.objects.filter(id=image_id).first()
             One_Original_Image = {
                 'user' : allOriginalImage.user.email,
                 'original_image_id' : allOriginalImage.id,
