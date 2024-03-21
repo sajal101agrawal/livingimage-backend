@@ -39,6 +39,17 @@ urlpatterns = [
     path('api/get-one-regen-image/', GetOneRegenrativeImage.as_view(), name='GetOneRegenrativeImage'),
     path('api/get-one-original-image/', GetOneOriginalImage.as_view(), name='GetOneOriginalImage'),
 
+
+    path('api/get-all-payment/', GetAllPayments.as_view(), name='GetAllPayments'),  # Admin  assertion Error
+    path('api/get-all-user/', GetAllUsers.as_view(), name='GetAllUsers'),  # Admin
+    path('api/delete-user/', DeleteUser.as_view(), name='DeleteUser'),  # Admin
+    path('api/view-user/', ViewUser.as_view(), name='ViewUser'),  # Admin
+    path('api/update-user/', UpdateUser.as_view(), name='UpdateUser'),  # Admin
+    path('api/get-all-regen-image/', AdminGetAllRegenrativeImage.as_view(), name='AdminGetAllRegenrativeImage'),  # Admin
+    path('api/get-all-original-image/', AdminGetAllOriginalImage.as_view(), name='AdminGetAllOriginalImage'),  # Admin
+    path('api/get-one-regen-image/', AdminGetOneRegenrativeImage.as_view(), name='AdminGetOneRegenrativeImage'),  # Admin
+    path('api/get-one-original-image/', AdminGetOneOriginalImage.as_view(), name='AdminGetOneOriginalImage'),  # Admin
+
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

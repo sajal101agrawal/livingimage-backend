@@ -484,6 +484,8 @@ class GetAllRegenrativeImage(APIView):
         Regen_Image_history = []
         user_id = get_user_id_from_token(request)
         user = CustomUser.objects.filter(id=user_id).first()    
+        if not user:
+            return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
         regen_count=0
         for allregeneratedImage in RegeneratedImage.objects.filter(user=user):
             tmp = {
@@ -531,6 +533,8 @@ class GetAllOriginalImage(APIView):
         Original_Image_history = []
         user_id = get_user_id_from_token(request)
         user = CustomUser.objects.filter(id=user_id).first()    
+        if not user:
+            return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
         Original_count=0
         for allOriginalImage in Image.objects.filter(user=user):
             tmp = {
@@ -574,7 +578,7 @@ class GetOneRegenrativeImage(APIView):
         user_id = get_user_id_from_token(request)
         user = CustomUser.objects.filter(id=user_id).first()    
         if not user:
-            return Response({'Message': 'User Not found.'}, status=status.HTTP_200_OK)
+            return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
         image_id=request.data.get('image_id')
         if not request.data.get('image_id') or not image_id:
             return Response({'Message': 'Image Id Not found'}, status=status.HTTP_400_BAD_REQUEST)
@@ -627,7 +631,7 @@ class GetOneOriginalImage(APIView):
         user_id = get_user_id_from_token(request)
         user = CustomUser.objects.filter(id=user_id).first()    
         if not user:
-            return Response({'Message': 'User Not found.'}, status=status.HTTP_200_OK)
+            return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
         image_id=request.data.get('image_id')
         if not request.data.get('image_id') or not image_id:
             return Response({'Message': 'image_id Not found'}, status=status.HTTP_400_BAD_REQUEST)
@@ -671,6 +675,490 @@ class GetOneOriginalImage(APIView):
 
 
 
+# -----------------------------------------------ADMIN API's ---------------------------------------------------------------
+class GetAllPayments(View):
+    """ 
+    Get-all-Payment if token is of super user
+    """
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        all_payment = PaymentRecord.objects.all()
+
+        payment_list=[]
+        for payment in all_payment:
+            payment_tmp={
+            "Payment ID" :payment.id,
+            "User Email" :payment.user.email,
+            "Payment Amount" :payment.total_amount,
+            "Total Credits" :payment.total_credits,
+            "Payment time" :payment.date_time,
+            "Payment Status" :payment.payment_status,
+            "Payment Gateway ID" :payment.payment_id,
+            "Payment Mode" :payment.payment_mode,
+            }
+
+            payment_list.append(payment_tmp)
+        
+        if payment_list :
+            return Response({'Message' : 'successfully got the payment list','Payment List' : payment_list}, status=status.HTTP_200_OK)
+        return Response({'Message' : 'could not got the payment list'}, status=status.HTTP_204_NO_CONTENT)
+
+class GetAllUsers(APIView):
+    """ 
+    Get-all-user if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        all_users = CustomUser.objects.all()
+
+        user_list=[]
+        for users in all_users:
+            users_tmp={
+            "User ID" :users.id,
+            "User Email" :users.email,
+            "User Name"  :users.name,
+            #"Payment Amount" :users.total_amount,
+            "Total Credits" :users.credit,
+            "Registered on" :users.created.strftime("%d/%m/%Y"),
+            "Verification Status" :users.is_user_verified,
+            #"Payment Mode" :users.payment_mode,
+            }
+
+            user_list.append(users_tmp)
+        
+        if user_list :
+            return Response({'Message' : 'successfully got the user list','User List' : user_list}, status=status.HTTP_200_OK)
+        return Response({'Message' : 'could not got the user list'}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+class DeleteUser(APIView):
+    """ 
+    Delete-user if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user_deleted = False
+
+        if 'email' not in request.data or not request.data.get('email'):
+            return Response({'Message' : 'could not got the user, Please provide email'}, status=status.HTTP_204_NO_CONTENT)
+        
+        delete_user_email =request.data['email']
+        delete_user = CustomUser.objects.filter(email=delete_user_email).first()  
+
+        if not delete_user:
+            msg = 'User not in record!!'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # delete_user.delete()
+        if delete_user.delete() :
+            user_deleted = True
+            return Response({'Message' : 'successfully got the user deleted', 'user_deleted' : user_deleted}, status=status.HTTP_200_OK) 
+        
+        return Response({'Message' : 'could not delete the user', 'user_deleted' : user_deleted}, status=status.HTTP_400_BAD_REQUEST)
+ 
+
+
+
+class ViewUser(APIView):
+    """ 
+    Get-user-Details if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+        
+        if 'email' not in request.data or not request.data.get('email'):
+            return Response({'Message' : 'could not got the user, please provide email'}, status=status.HTTP_204_NO_CONTENT)
+        
+        user_email =request.data.get('email')
+        # User Table
+        user_ = CustomUser.objects.filter(email=user_email).first()
+        if not user_:
+            msg = 'User not in record!!'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        print("The user is :",user_)
+        users_tmp={
+            #"Payment ID" :user_.id,
+            "User Email" :user_.email,
+            "User Name"  :user_.name,
+            "Total Credits" :user_.credit,
+            "Registered on" :user_.created.strftime("%d/%m/%Y"),
+            "Verification Status" :user_.is_user_verified,
+        }
+
+    
+
+        # Payment Table
+        payment = PaymentRecord.objects.filter(user=user_).first()
+
+        if payment:
+            payment_tmp={
+                "Payment ID" :payment.id,
+                "User Email" :payment.user.email,
+                "Payment Amount" :payment.total_amount,
+                "Total Credits" :payment.total_credits,
+                "Payment time" :payment.date_time.strftime("%d/%m/%Y"),
+                "Payment Status" :payment.payment_status,
+                "Payment Gateway ID" :payment.payment_id,
+                "Payment Mode" :payment.payment_mode,
+                }
+
+        else:
+            payment_tmp = {}
+
+        # Credit Table
+        credit = CreditHistory.objects.filter(user=user_).first()
+        if credit:
+            credit_tmp={
+                "credit ID" :credit.id,
+                "User Email" :credit.user.email,
+                "Total Credits" :credit.total_credits,
+                "Transaction Type" :credit.type_of_transaction,
+                "Transaction Date" :credit.created.strftime("%d/%m/%Y"),
+                "Payment ID" :credit.payment_id,
+                "Description" :credit.description,
+                }
+
+        credit_tmp={}
+
+        # Original Image Table
+        img = Image.objects.filter(user=user_).first()
+        if img:
+
+            One_Original_Image = {
+                    'original_image_id' : img.id,
+                    'user' : img.user.email,
+                    'original_image_name' : img.image_name,
+                    'original_image': img.photo.url,
+                    'public' : img.public,
+                    'prompt' : img.prompt,
+                    'created': img.created.strftime("%d/%m/%Y"),
+                    'regenerated_at': img.regenerated_at.strftime("%d/%m/%Y") if img.regenerated_at else None,
+                    'next_regeneration_at': img.nextregeneration_at.strftime("%d/%m/%Y"),
+                }
+        else:
+            One_Original_Image={}
+
+
+        # Regenerated Image Table
+        regen_img = RegeneratedImage.objects.filter(user=user_).first()
+
+        if regen_img:
+            One_Regen_Image = {
+                    'regenerated_image_id' : regen_img.id,
+                    'user' : regen_img.user.email,
+                    'regenerated_image' : regen_img.regenerated_image.url,
+                    'original_image_id' : regen_img.original_image_id,
+                    'original_image_name' : regen_img.original_image_name,
+                    'public' : regen_img.public,
+                    'created': regen_img.created.strftime("%d/%m/%Y"),
+                    'regenerated_at': regen_img.regenerated_at.strftime("%d/%m/%Y") if regen_img.regenerated_at else None,
+                    'next_regeneration_at': regen_img.nextregeneration_at.strftime("%d/%m/%Y"),
+                }
+        else:
+            One_Regen_Image={}
+
+        jsonn_response = {
+            'user_data' : users_tmp,
+            'Original_Image_data' : One_Original_Image,
+            'Regenerated_Image_data' : One_Regen_Image,
+            'Credit_data' : credit_tmp,
+            'Payment_data' : payment_tmp,
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+
+
+        #return Response({'Message' : 'could not find the user details'}, status=status.HTTP_400_BAD_REQUEST)
+ 
+
+class UpdateUser(APIView):
+    """ 
+    Update-user-details if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user_found = False
+        if 'email' not in request.data or not request.data.get('email'):
+            msg = 'could not found the email'
+            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not 'feild' in request.data and not request.data['feild']:
+            msg = 'could not found the feild which needs to be edited'
+            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not 'new_value' in request.data and not request.data['new_value']:
+            msg = 'could not found the new value which needs to be replaced with old values'
+            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+            
+        found_user = CustomUser.objects.filter(is_superuser=False,email=request.data['email'])
+        if not found_user :
+            return Response({'Message' : 'could not got the user'}, status=status.HTTP_204_NO_CONTENT)
+
+        found_user = found_user.first()
+        field_name = request.data['feild']
+        new_value = request.data['new_value']
+        
+        if field_name != 'name':
+            return Response({'Message' : 'Field name must be "name"'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            setattr(found_user, field_name, new_value)
+            found_user.save()
+            msg = 'Successfully edited the user data'
+            status_code = status.HTTP_200_OK
+            
+        except Exception as e:
+            msg = f'Error editing user data: {str(e)}'
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return Response({'Message' : msg}, status=status_code)
+
+
+
+
+class AdminGetAllRegenrativeImage(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        Regen_Image_history = []  
+        regen_count=0
+        for allregeneratedImage in RegeneratedImage.objects.all():
+            tmp = {
+                'user' : allregeneratedImage.user.email,
+                'regenerated_image_id' : allregeneratedImage.id,
+                'regenerated_image' : allregeneratedImage.regenerated_image.url,
+                'original_image_id' : allregeneratedImage.original_image_id,
+                'original_image_name' : allregeneratedImage.original_image_name,
+                'public' : allregeneratedImage.public,
+                'created': allregeneratedImage.created.strftime("%d/%m/%Y"),
+                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y") if allregeneratedImage.regenerated_at else None,
+                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y"),
+            }
+            regen_count+=1
+            Regen_Image_history.append(tmp)
+
+        jsonn_response = {
+            'Regenerated_Image_count' : regen_count,
+            'Regenerated_Image_data' : Regen_Image_history,
+            #'deposit_history' : diposit_history
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+
+
+class AdminGetAllOriginalImage(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+    
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+        Original_Image_history = []
+        Original_count=0
+        for allOriginalImage in Image.objects.all():
+            tmp = {
+                'user' : allOriginalImage.user.email,
+                'original_image_id' : allOriginalImage.id,
+                'original_image_name' : allOriginalImage.image_name,
+                'original_image': allOriginalImage.photo.url,
+                'public' : allOriginalImage.public,
+                'prompt' : allOriginalImage.prompt,
+                'created': allOriginalImage.created.strftime("%d/%m/%Y"),
+                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y") if allOriginalImage.regenerated_at else None,
+                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y"),
+            }
+            Original_count+=1
+            Original_Image_history.append(tmp)
+
+        jsonn_response = {
+            'Original_Image_count' : Original_count,
+            'Original_Image_data' : Original_Image_history,
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
+
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+
+
+
+#------------------------------------------------ ADMIN Get SINGLE Regenerative Image-------------------------------------------------
+
+class AdminGetOneRegenrativeImage(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        image_id=request.data.get('image_id')
+        if not request.data.get('image_id') or not image_id:
+            return Response({'Message': 'Image Id Not found'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            allregeneratedImage = RegeneratedImage.objects.filter(user=user,id=image_id).first()
+            One_Regen_Image = {
+                'user' : allregeneratedImage.user.email,
+                'regenerated_image_id' : allregeneratedImage.id,
+                'regenerated_image' : allregeneratedImage.regenerated_image.url,
+                'original_image_id' : allregeneratedImage.original_image_id,
+                'original_image_name' : allregeneratedImage.original_image_name,
+                'public' : allregeneratedImage.public,
+                'created': allregeneratedImage.created.strftime("%d/%m/%Y"),
+                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y") if allregeneratedImage.regenerated_at else None,
+                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y"),
+            }
+                
+                
+
+            jsonn_response = {
+                'Regenerated_Image_data' : One_Regen_Image,
+                #'deposit_history' : diposit_history
+            }
+            response = Response(jsonn_response, status=status.HTTP_200_OK)
+            # Set the Referrer Policy header
+            response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            return response
+        
+        except:
+            jsonn_response = {
+                'Message' : "No Images Found"
+            }
+            response = Response(jsonn_response, status=status.HTTP_400_BAD_REQUEST)
+            response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            return response
+#------------------------------------------------ ADMIN Get SINGLE Regenerative Image-------------------------------------------------
+    
+
+
+#------------------------------------------------ ADMIN Get SINGLE Original Image-------------------------------------------------
+
+class AdminGetOneOriginalImage(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        image_id=request.data.get('image_id')
+        if not request.data.get('image_id') or not image_id:
+            return Response({'Message': 'image_id Not found'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:              
+            allOriginalImage = Image.objects.filter(user=user,id=image_id).first()
+            One_Original_Image = {
+                'user' : allOriginalImage.user.email,
+                'original_image_id' : allOriginalImage.id,
+                'original_image_name' : allOriginalImage.image_name,
+                'original_image': allOriginalImage.photo.url,
+                'public' : allOriginalImage.public,
+                'prompt' : allOriginalImage.prompt,
+                'created': allOriginalImage.created.strftime("%d/%m/%Y"),
+                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y") if allOriginalImage.regenerated_at else None,
+                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y"),
+            }
+
+            jsonn_response = {
+                'Original_Image_data' : One_Original_Image,
+            }
+            response = Response(jsonn_response, status=status.HTTP_200_OK)
+            
+            # Set the Referrer Policy header
+            response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+            return response
+        
+        except:
+            jsonn_response = {
+                'Message' : "No Images Found"
+            }
+            response = Response(jsonn_response, status=status.HTTP_400_BAD_REQUEST)
+            response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            return response
+#------------------------------------------------ ADMIN Get SINGLE Original Image-------------------------------------------------
+
+# -----------------------------------------------ADMIN API's ---------------------------------------------------------------
 
 #----------------------Code copied from Keywordlit Project--------------------------------------------------------------
 

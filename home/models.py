@@ -171,6 +171,21 @@ class RegeneratedImage(TimeStampModel):
         return f"Regenerated Image {self.id} for User {self.user.email}"
 
 
+# from django.db.models.signals import pre_delete
+# from django.dispatch import receiver
+
+# @receiver(pre_delete, sender=Image)
+# def delete_regenerated_image(sender, instance, **kwargs):
+#     # Delete corresponding RegeneratedImage when an Image is deleted
+#     RegeneratedImage.objects.filter(original_image_id=instance.id).delete()
+
+# @receiver(pre_delete, sender=RegeneratedImage)
+# def delete_original_image(sender, instance, **kwargs):
+#     # Delete corresponding Image when a RegeneratedImage is deleted
+#     Image.objects.filter(id=instance.original_image_id).delete()
+
+
+
 
 #---------------------------------------------------Credit Pricing Models-------------------------------------------------------------
 class CreditPricing(models.Model):
