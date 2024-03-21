@@ -707,7 +707,7 @@ class GetAllPayments(View):
             "Payment Status" :payment.payment_status,
             "Payment Gateway ID" :payment.payment_id,
             "Payment Mode" :payment.payment_mode,
-            }
+            } 
 
             payment_list.append(payment_tmp)
         
