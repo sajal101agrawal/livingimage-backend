@@ -735,7 +735,7 @@ class GetAllUsers(APIView):
             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
         
         all_users = CustomUser.objects.all()
-
+        total_users = len(all_users) 
         user_list=[]
         for users in all_users:
             users_tmp={
@@ -750,10 +750,22 @@ class GetAllUsers(APIView):
             }
 
             user_list.append(users_tmp)
+
+        jsonn_response = {
+            'Total user' : total_users,
+            'Users Data' : user_list
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
         
-        if user_list :
-            return Response({'Message' : 'successfully got the user list','User List' : user_list}, status=status.HTTP_200_OK)
-        return Response({'Message' : 'could not got the user list'}, status=status.HTTP_204_NO_CONTENT)
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+
+        
+        # if user_list :
+        #     return Response({'Message' : 'successfully got the user data','User data' : response}, status=status.HTTP_200_OK)
+        # return Response({'Message' : 'could not got the user list'}, status=status.HTTP_204_NO_CONTENT)
 
 
 
@@ -1170,6 +1182,74 @@ class AdminGetOneOriginalImage(APIView):
             response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
             return response
 #------------------------------------------------ ADMIN Get SINGLE Original Image-------------------------------------------------
+
+#------------------------------------------------ ADMIN Analytics-------------------------------------------------
+class AdminAnalytics(APIView):
+    """ 
+    Get-Analytics if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # User Table
+        user_ = CustomUser.objects.all()
+        total_user = len(user_)
+
+        # Payment Table
+        payment = PaymentRecord.objects.all()
+        total_payment_count = len(payment)
+
+        tot_pay=0
+        if payment:
+            for pay in payment:
+                tot_pay = tot_pay + pay.total_amount
+        
+
+        # Credit Table
+        # credit = CreditHistory.objects.all()
+        # if credit:
+        #     credit_tmp={
+        #         "credit ID" :credit.id,
+        #         "User Email" :credit.user.email,
+        #         "Total Credits" :credit.total_credits,
+        #         "Transaction Type" :credit.type_of_transaction,
+        #         "Transaction Date" :credit.created.strftime("%d/%m/%Y"),
+        #         "Payment ID" :credit.payment_id,
+        #         "Description" :credit.description,
+        #         }
+
+        # credit_tmp={}
+
+        # Original Image Table
+        img = Image.objects.all()
+        total_original_image = len(img)
+
+        # Regenerated Image Table
+        regen_img = RegeneratedImage.objects.all()
+        total_regen_image = len(regen_img)
+
+        jsonn_response = {
+            'Total user' : total_user,
+            'Total Original Images' : total_original_image,
+            'Total Regenerated Images' : total_regen_image,
+            'Total Payments' : total_payment_count,
+            'Total Payment Amount' : tot_pay,
+        }
+        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        
+        # Set the Referrer Policy header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        return response
+
+#------------------------------------------------ ADMIN Analytics-------------------------------------------------
+
 
 # -----------------------------------------------ADMIN API's ---------------------------------------------------------------
 
