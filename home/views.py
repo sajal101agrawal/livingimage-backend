@@ -249,8 +249,8 @@ class UserProfileView(APIView):
                 'prompt' : history.prompt,
                 'frequency_type' : history.frequency_type,#created.strftime("%d/%m/%Y"),
                 'frequency' : history.frequency,#json.loads(history.result.replace("'", "\"")),
-                'created': history.created.strftime("%d/%m/%Y"),
-                'updated': history.updated.strftime("%d/%m/%Y"),
+                'created': history.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'updated': history.updated.strftime("%d/%m/%Y %H:%M:%S"),
             }
             Image_history.append(tmp)
             image_count=len(Image_history)
@@ -259,7 +259,7 @@ class UserProfileView(APIView):
         for MoneyHistory in DepositeMoney.objects.filter(user=user):
             tmp = {
                 'deposit_id' : MoneyHistory.id,
-                'date' : MoneyHistory.created.strftime("%d/%m/%Y"),
+                'date' : MoneyHistory.created.strftime("%d/%m/%Y %H:%M:%S"),
                 'amount' : MoneyHistory.Amount,
                 'transection_id' : MoneyHistory.TransactionId,
                 'method' : MoneyHistory.method,
@@ -426,7 +426,7 @@ class GetPublicOriginalImage(APIView):
                 'user' : images.user.email,
                 'original_image' : images.photo.url,
                 'public' : images.public,
-                'original_at': images.created.strftime("%d/%m/%Y") if images.created else None,
+                'original_at': images.created.strftime("%d/%m/%Y %H:%M:%S") if images.created else None,
             }
             orig_Image_history.append(tmp)
 
@@ -453,7 +453,7 @@ class GetPublicRegenrativeImage(APIView):
                 'user' : images.user.email,
                 'regenerated_image' : images.regenerated_image.url,
                 'public' : images.public,
-                'regenerated_at': images.regenerated_at.strftime("%d/%m/%Y") if images.regenerated_at else None,
+                'regenerated_at': images.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if images.regenerated_at else None,
             }
             Regen_Image_history.append(tmp)
 
@@ -498,9 +498,9 @@ class GetAllRegenrativeImage(APIView):
                 # 'prompt' : allregeneratedImage.prompt,
                 # 'frequency_type' : allregeneratedImage.frequency_type,#created.strftime("%d/%m/%Y"),
                 # 'frequency' : allregeneratedImage.frequency,#json.loads(history.result.replace("'", "\"")),
-                'created': allregeneratedImage.created.strftime("%d/%m/%Y"),
-                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y") if allregeneratedImage.regenerated_at else None,
-                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y"),
+                'created': allregeneratedImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allregeneratedImage.regenerated_at else None,
+                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
             regen_count+=1
             Regen_Image_history.append(tmp)
@@ -546,9 +546,9 @@ class GetAllOriginalImage(APIView):
                 'prompt' : allOriginalImage.prompt,
                 # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
                 # 'frequency' : allOriginalImage.frequency,#json.loads(history.result.replace("'", "\"")),
-                'created': allOriginalImage.created.strftime("%d/%m/%Y"),
-                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y") if allOriginalImage.regenerated_at else None,
-                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y"),
+                'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
+                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
             Original_count+=1
             Original_Image_history.append(tmp)
@@ -594,9 +594,9 @@ class GetOneRegenrativeImage(APIView):
                 # 'prompt' : allregeneratedImage.prompt,
                 # 'frequency_type' : allregeneratedImage.frequency_type,#created.strftime("%d/%m/%Y"),
                 # 'frequency' : allregeneratedImage.frequency,#json.loads(history.result.replace("'", "\"")),
-                'created': allregeneratedImage.created.strftime("%d/%m/%Y"),
-                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y") if allregeneratedImage.regenerated_at else None,
-                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y"),
+                'created': allregeneratedImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allregeneratedImage.regenerated_at else None,
+                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
                 
                 
@@ -647,9 +647,9 @@ class GetOneOriginalImage(APIView):
                 'prompt' : allOriginalImage.prompt,
                 # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
                 # 'frequency' : allOriginalImage.frequency,#json.loads(history.result.replace("'", "\"")),
-                'created': allOriginalImage.created.strftime("%d/%m/%Y"),
-                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y") if allOriginalImage.regenerated_at else None,
-                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y"),
+                'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
+                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
 
             jsonn_response = {
@@ -744,7 +744,7 @@ class GetAllUsers(APIView):
             "Name"  :users.name,
             #"Payment Amount" :users.total_amount,
             "Total Credits" :users.credit,
-            "Registered on" :users.created.strftime("%d/%m/%Y"),
+            "Registered on" :users.created.strftime("%d/%m/%Y %H:%M:%S"),
             "Verification Status" :users.is_user_verified,
             #"Payment Mode" :users.payment_mode,
             }
@@ -833,7 +833,7 @@ class ViewUser(APIView):
             "User Email" :user_.email,
             "User Name"  :user_.name,
             "Total Credits" :user_.credit,
-            "Registered on" :user_.created.strftime("%d/%m/%Y"),
+            "Registered on" :user_.created.strftime("%d/%m/%Y %H:%M:%S"),
             "Verification Status" :user_.is_user_verified,
         }
 
@@ -848,7 +848,7 @@ class ViewUser(APIView):
                 "User Email" :payment.user.email,
                 "Payment Amount" :payment.total_amount,
                 "Total Credits" :payment.total_credits,
-                "Payment time" :payment.date_time.strftime("%d/%m/%Y"),
+                "Payment date time" :payment.date_time.strftime("%d/%m/%Y %H:%M:%S"),
                 "Payment Status" :payment.payment_status,
                 "Payment Gateway ID" :payment.payment_id,
                 "Payment Mode" :payment.payment_mode,
@@ -865,7 +865,7 @@ class ViewUser(APIView):
                 "User Email" :credit.user.email,
                 "Total Credits" :credit.total_credits,
                 "Transaction Type" :credit.type_of_transaction,
-                "Transaction Date" :credit.created.strftime("%d/%m/%Y"),
+                "Transaction Date Time" :credit.created.strftime("%d/%m/%Y %H:%M:%S"),
                 "Payment ID" :credit.payment_id,
                 "Description" :credit.description,
                 }
@@ -883,9 +883,9 @@ class ViewUser(APIView):
                     'original_image': img.photo.url,
                     'public' : img.public,
                     'prompt' : img.prompt,
-                    'created': img.created.strftime("%d/%m/%Y"),
-                    'regenerated_at': img.regenerated_at.strftime("%d/%m/%Y") if img.regenerated_at else None,
-                    'next_regeneration_at': img.nextregeneration_at.strftime("%d/%m/%Y"),
+                    'created': img.created.strftime("%d/%m/%Y %H:%M:%S"),
+                    'regenerated_at': img.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if img.regenerated_at else None,
+                    'next_regeneration_at': img.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
                 }
         else:
             One_Original_Image={}
@@ -902,9 +902,9 @@ class ViewUser(APIView):
                     'original_image_id' : regen_img.original_image_id,
                     'original_image_name' : regen_img.original_image_name,
                     'public' : regen_img.public,
-                    'created': regen_img.created.strftime("%d/%m/%Y"),
-                    'regenerated_at': regen_img.regenerated_at.strftime("%d/%m/%Y") if regen_img.regenerated_at else None,
-                    'next_regeneration_at': regen_img.nextregeneration_at.strftime("%d/%m/%Y"),
+                    'created': regen_img.created.strftime("%d/%m/%Y %H:%M:%S"),
+                    'regenerated_at': regen_img.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if regen_img.regenerated_at else None,
+                    'next_regeneration_at': regen_img.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
                 }
         else:
             One_Regen_Image={}
@@ -1004,9 +1004,9 @@ class AdminGetAllRegenrativeImage(APIView):
                 'original_image_id' : allregeneratedImage.original_image_id,
                 'original_image_name' : allregeneratedImage.original_image_name,
                 'public' : allregeneratedImage.public,
-                'created': allregeneratedImage.created.strftime("%d/%m/%Y"),
-                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y") if allregeneratedImage.regenerated_at else None,
-                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y"),
+                'created': allregeneratedImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allregeneratedImage.regenerated_at else None,
+                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
             regen_count+=1
             Regen_Image_history.append(tmp)
@@ -1049,9 +1049,9 @@ class AdminGetAllOriginalImage(APIView):
                 'original_image': allOriginalImage.photo.url,
                 'public' : allOriginalImage.public,
                 'prompt' : allOriginalImage.prompt,
-                'created': allOriginalImage.created.strftime("%d/%m/%Y"),
-                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y") if allOriginalImage.regenerated_at else None,
-                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y"),
+                'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
+                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
             Original_count+=1
             Original_Image_history.append(tmp)
@@ -1099,9 +1099,9 @@ class AdminGetOneRegenrativeImage(APIView):
                 'original_image_id' : allregeneratedImage.original_image_id,
                 'original_image_name' : allregeneratedImage.original_image_name,
                 'public' : allregeneratedImage.public,
-                'created': allregeneratedImage.created.strftime("%d/%m/%Y"),
-                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y") if allregeneratedImage.regenerated_at else None,
-                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y"),
+                'created': allregeneratedImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allregeneratedImage.regenerated_at else None,
+                'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
                 
                 
@@ -1159,9 +1159,9 @@ class AdminGetOneOriginalImage(APIView):
                 'original_image': allOriginalImage.photo.url,
                 'public' : allOriginalImage.public,
                 'prompt' : allOriginalImage.prompt,
-                'created': allOriginalImage.created.strftime("%d/%m/%Y"),
-                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y") if allOriginalImage.regenerated_at else None,
-                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y"),
+                'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+                'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
+                'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
 
             jsonn_response = {
