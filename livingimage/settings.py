@@ -232,7 +232,7 @@ CELERY_TIMEZONE = 'UTC'
 CELERY_BEAT_SCHEDULE = {
     'Find_Next_Regen_Datetime': {
         'task': 'home.tasks.find_next_regeneration_datetime',
-        'schedule': 300,  # Execute every 60 seconds (adjust as needed)
+        'schedule': 10,  # Execute every 60 seconds (adjust as needed)
     },
 }
 

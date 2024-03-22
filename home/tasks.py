@@ -202,8 +202,8 @@ def find_next_regeneration_datetime():
         from datetime import timedelta
         # Calculate the datetime range for 30 minutes interval      #  IMAGE MODEL OBJECT .ALL RETURN 
         now = datetime.now(pytz.utc)
-        time_before = now - timedelta(minutes=5)
-        time_after = now + timedelta(minutes=5)
+        time_before = now - timedelta(seconds=10)
+        time_after = now + timedelta(seconds=10)
         
         # Query the database for images within the 30 minutes interval
         images_to_regenerate = Image.objects.filter(
