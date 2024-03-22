@@ -141,6 +141,7 @@ class Image(TimeStampModel):
         ('year', 'Year'),
         ('hour', 'Hour'),
         ('minute', 'Minute'),
+        ('second', 'Second'),
     )
     id=models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)

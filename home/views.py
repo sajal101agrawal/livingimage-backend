@@ -402,6 +402,8 @@ def calculate_regeneration_time(frequency,frequency_type):
             regenerative_at = now_utc + timedelta(hours= frequency)
         elif frequency_type == 'minute':
             regenerative_at = now_utc + timedelta(minutes= frequency)
+        elif frequency_type == 'second':
+            regenerative_at = now_utc + timedelta(seconds= frequency)
         else:
             # Handle unsupported frequency_type
             regenerative_at = None
