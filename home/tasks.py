@@ -57,8 +57,8 @@ def regenerate_image(image_id):
         return processed_image
 
 
-
-    def generate_image(prompt, image_path):
+    def generate_image(image_path):
+    #def generate_image(prompt, image_path):
         # Preprocess the image
         openai_api_key=openai_account.objects.first()
         api_key=openai_api_key.key
@@ -66,12 +66,19 @@ def regenerate_image(image_id):
         client = OpenAI(api_key=api_key)
 
         # Generate image based on prompt and preprocessed image
-        response = client.images.edit(
-            model="dall-e-2",
-            image=preprocessed_image,
-            prompt=prompt,
-            n=1,
-            size="1024x1024"
+        # response = client.images.edit(
+        #     model="dall-e-2",
+        #     image=preprocessed_image,
+        #     prompt=prompt,
+        #     n=1,
+        #     size="1024x1024"
+        # )
+
+
+        response = client.images.create_variation(
+        image=preprocessed_image,
+        n=2,
+        size="1024x1024"
         )
 
         # Extract URL of the generated image from the API response
@@ -81,13 +88,14 @@ def regenerate_image(image_id):
 
 
     def regenerate_image_logic(original_image):
-        prompt=original_image.prompt
+        #prompt=original_image.prompt
         image_path=original_image.photo
-        regenerated_image_url = generate_image(prompt, image_path)
+        regenerated_image_url = generate_image(image_path)
+        #regenerated_image_url = generate_image(prompt, image_path)
         #return regenerated_image
         return  regenerated_image_url
 
-    def save_to_s3(image, original_image, user, regenerative_at_):
+    def save_to_s3(image_url, original_image, user, regenerative_at_):
         #now_utc = datetime.now(pytz.utc)
         # Connect to your S3 bucket using Boto3
         s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
@@ -95,19 +103,32 @@ def regenerate_image(image_id):
         # Convert the regenerated image to binary datas
         # with BytesIO() as buffer:
             # Download the image data from the URL
-        image_data = requests.get(image).content
+        image_data = requests.get(image_url).content
 
-        # Wrap the image_data in a BytesIO object
-        image_buffer = BytesIO(image_data)
+        # # Wrap the image_data in a BytesIO object
+        # image_buffer = BytesIO(image_data)
         
+        # # Upload the binary data to your S3 bucket
+        # s3.upload_fileobj(image_buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')
+
+
         # Upload the binary data to your S3 bucket
-        s3.upload_fileobj(image_buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')
+        s3.put_object(Body=image_data, 
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME2, 
+                    Key=f'regenerated_image_{original_image_name}.png',
+                    ContentType='image/png',  # Set the content type to image/png
+                    ContentDisposition='inline')
+                    #ACL='public-read')  # Set ACL to 'public-read'
+        
+        regenerated_image_filename = f'regenerated_image_{original_image_name}.png'
+
+
 
         regenerated_image = RegeneratedImage.objects.create(
             user=user,
             original_image_name=original_image_name,
             original_image_id=original_image.id,
-            regenerated_image=f'regenerated_image_{original_image_name}.png',
+            regenerated_image=regenerated_image_filename, #f'regenerated_image_{original_image_name}.png',
             regenerated_at=datetime.now(pytz.utc),
             public=original_image.public,
             nextregeneration_at=regenerative_at_)

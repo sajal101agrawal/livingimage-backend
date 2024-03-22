@@ -1550,18 +1550,22 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 
 
-class RegenerateImageView(View):
+class RegenerateImageView(APIView):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
     def post(self, request):
         # Retrieve image ID from the request data
-        image_id = request.POST.get('image_id')
         # Get user ID from the request (assuming you have authentication implemented)
         user_id = get_user_id_from_token(request)
         if user_id:
-            try:
+            if not 'image_id' in request.data or not request.data.get('image_id'):
+                return JsonResponse({'error': 'Image not found'}, status=404)
+            image_id = request.data.get('image_id')
+
+            print(image_id)
+            try: 
                 # Fetch the original image details from the database
                 original_image = Image.objects.get(id=image_id, user__id=user_id)
                 # Apply your regeneration logic here
@@ -1571,11 +1575,11 @@ class RegenerateImageView(View):
                 # Save the regenerated image to S3 and database
                 user = CustomUser.objects.filter(id=user_id).first()
                 self.save_to_s3(regenerated_image, original_image, user, regenerative_at_)
-                return JsonResponse({'message': 'Regenerated image saved successfully'}, status=200)
-            except Image.DoesNotExist:
-                return JsonResponse({'error': 'Image not found'}, status=404)
+                return JsonResponse({'Message': 'Regenerated image saved successfully'}, status=200)
+            except:
+                return JsonResponse({'Message': 'Image not exist'}, status=400)
         else:
-            return JsonResponse({'error': 'User not authenticated'}, status=401)
+            return JsonResponse({'Message': 'User not authenticated'}, status=401)
 
 
     def preprocess_image(self, image_path, target_size=(1024, 1024)):
@@ -1598,7 +1602,7 @@ class RegenerateImageView(View):
 
 
 
-    def generate_image(self,prompt, image_path):
+    def generate_image(self, image_path):
         # Preprocess the image
         openai_api_key=openai_account.objects.first()
         api_key=openai_api_key.key
@@ -1606,12 +1610,18 @@ class RegenerateImageView(View):
         client = OpenAI(api_key=api_key)
 
         # Generate image based on prompt and preprocessed image
-        response = client.images.edit(
-            model="dall-e-2",
-            image=preprocessed_image,
-            prompt=prompt,
-            n=1,
-            size="1024x1024"
+        # response = client.images.edit(
+        #     model="dall-e-2",
+        #     image=preprocessed_image,
+        #     prompt=prompt,
+        #     n=1,
+        #     size="1024x1024"
+        # )
+
+        response = client.images.create_variation(
+        image=preprocessed_image,
+        n=2,
+        size="1024x1024"
         )
 
         # Extract URL of the generated image from the API response
@@ -1621,51 +1631,49 @@ class RegenerateImageView(View):
 
 
     def regenerate_image_logic(self, original_image):
-        prompt=original_image.prompt
+        #prompt=original_image.prompt
         image_path=original_image.photo
-        regenerated_image_url = self.generate_image(prompt, image_path)
-        # Implement your regeneration logic here
-        # For example, you can use PIL to apply transformations to the original image
-        # Here's a simple example:
-        #regenerated_image_data = original_image.photo.read()  # Read the binary data of the original image
-        #regenerated_image = PILImage.open(BytesIO(regenerated_image_data))  # Open the image using PIL
-        # Apply any desired transformations (e.g., resizing, filtering, etc.)
-        # Example: regenerated_image = regenerated_image.resize((new_width, new_height))
+        #regenerated_image_url = self.generate_image(prompt, image_path)
+        regenerated_image_url = self.generate_image(image_path)
+
         #return regenerated_image
         return  regenerated_image_url
 
-    def save_to_s3(self, image, original_image, user, regenerative_at_):
+    def save_to_s3(self, image_url, original_image, user, regenerative_at_):
         #now_utc = datetime.now(pytz.utc)
         # Connect to your S3 bucket using Boto3
         s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
         original_image_name=original_image.image_name
-        # Convert the regenerated image to binary data
-        # with BytesIO() as buffer:
-            # Download the image data from the URL
-        image_data = requests.get(image).content
-            # buffer.write(image_data)
-            # #image.save(buffer, format='PNG')  # Adjust the format as needed
-            # buffer.seek(0)
-            # buffer.save(buffer, format='PNG')
-            # Upload the binary data to your S3 bucket
-        #s3.upload_fileobj(image_data, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')  # Adjust the filename as needed
-        # Save the regenerated image details to the database
 
-        # Wrap the image_data in a BytesIO object
-        image_buffer = BytesIO(image_data)
+        # Download the image data from the URL
+        image_data = requests.get(image_url).content
+
+        # # Wrap the image_data in a BytesIO object
+        # image_buffer = BytesIO(image_data)
         
+        # # Upload the binary data to your S3 bucket
+        # s3.upload_fileobj(image_buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')
+
         # Upload the binary data to your S3 bucket
-        s3.upload_fileobj(image_buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')
+        file_path = f'{original_image_name}.png'
+        s3.put_object(Body=image_data, 
+                      Bucket=settings.AWS_STORAGE_BUCKET_NAME2, 
+                      Key=file_path,
+                      ContentType='image/png',  
+                      ContentDisposition='inline')
+    
+
 
         regenerated_image = RegeneratedImage.objects.create(
             user=user,
             original_image_name=original_image_name,
             original_image_id=original_image.id,
-            regenerated_image=f'regenerated_image_{original_image_name}.png',
+            #regenerated_image=f'regenerated_image_{original_image_name}.png',
+            regenerated_image=file_path,#,regenerated_image_filename,
             regenerated_at=datetime.now(pytz.utc),
             public=original_image.public,
             nextregeneration_at=regenerative_at_)
-        
+
 
         original_image.regenerated_at = datetime.now(pytz.utc)
         original_image.nextregeneration_at = regenerative_at_
