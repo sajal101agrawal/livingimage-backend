@@ -31,10 +31,10 @@ urlpatterns = [
     path('api/change-password/', UserModifyPasswordView.as_view(), name='api-changepassword'), # NEW CHANGE PASSOWRD FOR EXISTING USERS
 
 
-    path('api/get-public-original-image/', GetPublicOriginalImage.as_view(), name='GetPublicOriginalImage'), # DONE
-    path('api/get-public-regen-image/', GetPublicRegenrativeImage.as_view(), name='GetPublicRegenrativeImage'), # DONE
-    path('api/get-all-regen-image/', GetAllRegenrativeImage.as_view(), name='GetAllRegenrativeImage'), # DONE
-    path('api/get-all-original-image/', GetAllOriginalImage.as_view(), name='GetAllOriginalImage'), # DONE
+    path('api/get-public-original-image/', GetPublicOriginalImage.as_view(), name='GetPublicOriginalImage'), # Pagination done DONE
+    path('api/get-public-regen-image/', GetPublicRegenrativeImage.as_view(), name='GetPublicRegenrativeImage'), # Pagination DONE
+    path('api/get-all-regen-image/', GetAllRegenrativeImage.as_view(), name='GetAllRegenrativeImage'), # Pagination DONE
+    path('api/get-all-original-image/', GetAllOriginalImage.as_view(), name='GetAllOriginalImage'), # Pagination DONE
     path('api/get-one-regen-image/', GetOneRegenrativeImage.as_view(), name='GetOneRegenrativeImage'),
     path('api/get-one-original-image/', GetOneOriginalImage.as_view(), name='GetOneOriginalImage'),
 
@@ -44,8 +44,8 @@ urlpatterns = [
     path('api/admin/delete-user/', DeleteUser.as_view(), name='DeleteUser'),  # Admin
     path('api/admin/view-user/', ViewUser.as_view(), name='ViewUser'),  # Admin
     path('api/admin/update-user-admin/', AdminUpdateUser.as_view(), name='UpdateUser'),  # Admin # Only Name can be updated
-    path('api/admin/get-all-regen-admin/', AdminGetAllRegenrativeImage.as_view(), name='AdminGetAllRegenrativeImage'),  # Admin
-    path('api/admin/get-all-original-admin/', AdminGetAllOriginalImage.as_view(), name='AdminGetAllOriginalImage'),  # Admin
+    path('api/admin/get-all-regen-admin/', AdminGetAllRegenrativeImage.as_view(), name='AdminGetAllRegenrativeImage'),  # Pagination Done Admin
+    path('api/admin/get-all-original-admin/', AdminGetAllOriginalImage.as_view(), name='AdminGetAllOriginalImage'),  # Pagination Done Admin
     path('api/admin/get-one-regen-admin/', AdminGetOneRegenrativeImage.as_view(), name='AdminGetOneRegenrativeImage'),  # Admin
     path('api/admin/get-one-original-admin/', AdminGetOneOriginalImage.as_view(), name='AdminGetOneOriginalImage'),  # Admin
     path('api/admin/analytics/', AdminAnalytics.as_view(), name='AdminAnalytics'),  # Admin

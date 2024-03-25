@@ -26,6 +26,7 @@ import pytz
 import io
 from openai import OpenAI
 import requests
+from rest_framework.pagination import PageNumberPagination
 # Create your views here.
 
 #----------------------Code copied from Keywordlit Project----------------------------------------------------------------
@@ -420,10 +421,13 @@ from django.views.decorators.csrf import csrf_exempt
 #------------------------------------------------Get All Original Image Public TRUE---------------------------------------------
 
 class GetPublicOriginalImage(APIView):
+    pagination_class = PageNumberPagination  # Add pagination class
     def get(self, request):
         img = Image.objects.filter(public=True)
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(img, request)
         orig_Image_history=[]
-        for images in img:
+        for images in result_page:
             tmp = {
                 'user' : images.user.email,
                 'original_image' : str(images.photo),
@@ -435,22 +439,28 @@ class GetPublicOriginalImage(APIView):
         jsonn_response = {
             'Original_Image_data' : orig_Image_history,
         }
-        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        # response = Response(jsonn_response, status=status.HTTP_200_OK)
         
-        # Set the Referrer Policy header
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # # Set the Referrer Policy header
+        # response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 
-        return response
+        # return response
+        return paginator.get_paginated_response(jsonn_response)
 
 #------------------------------------------------Get All Original Image Public TRUE-------------------------------------
 
 #------------------------------------------------Get All Regenerative Image Public TRUE---------------------------------------------
 
 class GetPublicRegenrativeImage(APIView):
+    pagination_class = PageNumberPagination  # Add pagination class
     def get(self, request):
         img = RegeneratedImage.objects.filter(public=True)
+        # Apply pagination to the queryset
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(img, request)
+
         Regen_Image_history=[]
-        for images in img:
+        for images in result_page:
             tmp = {
                 'user' : images.user.email,
                 'regenerated_image' : str(images.regenerated_image),
@@ -462,110 +472,214 @@ class GetPublicRegenrativeImage(APIView):
         jsonn_response = {
             'Regenerated_Image_data' : Regen_Image_history,
         }
-        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        # response = Response(jsonn_response, status=status.HTTP_200_OK)
         
-        # Set the Referrer Policy header
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # # Set the Referrer Policy header
+        # response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 
-        return response
+        # return response
+        return paginator.get_paginated_response(jsonn_response)
 
 #------------------------------------------------Get All Regenerative Image Public TRUE-------------------------------------
 
 
 #------------------------------------------------Get All Regenerative Image-------------------------------------------------
 
+# class GetAllRegenrativeImage(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+
+#     @csrf_exempt
+#     def dispatch(self, *args, **kwargs):
+#         return super().dispatch(*args, **kwargs)
+
+#     def post(self,request):
+#         Regen_Image_history = []
+#         user_id = get_user_id_from_token(request)
+#         user = CustomUser.objects.filter(id=user_id).first()    
+#         if not user:
+#             return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+#         regen_count=0
+#         for allregeneratedImage in RegeneratedImage.objects.filter(user=user):
+#             tmp = {
+#                 'user' : allregeneratedImage.user.email,
+#                 'regenerated_image_id' : allregeneratedImage.id,
+#                 'regenerated_image' : str(allregeneratedImage.regenerated_image),
+#                 'original_image_id' : allregeneratedImage.original_image_id,
+#                 'original_image_name' : allregeneratedImage.original_image_name,
+#                 'public' : allregeneratedImage.public,
+#                 # 'prompt' : allregeneratedImage.prompt,
+#                 # 'frequency_type' : allregeneratedImage.frequency_type,#created.strftime("%d/%m/%Y"),
+#                 # 'frequency' : allregeneratedImage.frequency,#json.loads(history.result.replace("'", "\"")),
+#                 'created': allregeneratedImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+#                 'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allregeneratedImage.regenerated_at else None,
+#                 'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
+#             }
+#             regen_count+=1
+#             Regen_Image_history.append(tmp)
+
+#         jsonn_response = {
+#             'Total_Regenerated_Image_count' : regen_count,
+#             'Regenerated_Image_data' : Regen_Image_history,
+#             #'deposit_history' : diposit_history
+#         }
+#         response = Response(jsonn_response, status=status.HTTP_200_OK)
+        
+#         # Set the Referrer Policy header
+#         response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+#         return response
+
 class GetAllRegenrativeImage(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination  # Add pagination class
 
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
-    def post(self,request):
-        Regen_Image_history = []
+    def post(self, request):
         user_id = get_user_id_from_token(request)
-        user = CustomUser.objects.filter(id=user_id).first()    
+        user = CustomUser.objects.filter(id=user_id).first()
         if not user:
             return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
-        regen_count=0
-        for allregeneratedImage in RegeneratedImage.objects.filter(user=user):
+
+        regenerated_images = RegeneratedImage.objects.filter(user=user)
+
+        # Apply pagination to the queryset
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(regenerated_images, request)
+
+        Regen_Image_history = []
+        for allregeneratedImage in result_page:
             tmp = {
-                'user' : allregeneratedImage.user.email,
-                'regenerated_image_id' : allregeneratedImage.id,
-                'regenerated_image' : str(allregeneratedImage.regenerated_image),
-                'original_image_id' : allregeneratedImage.original_image_id,
-                'original_image_name' : allregeneratedImage.original_image_name,
-                'public' : allregeneratedImage.public,
-                # 'prompt' : allregeneratedImage.prompt,
-                # 'frequency_type' : allregeneratedImage.frequency_type,#created.strftime("%d/%m/%Y"),
-                # 'frequency' : allregeneratedImage.frequency,#json.loads(history.result.replace("'", "\"")),
+                'user': allregeneratedImage.user.email,
+                'regenerated_image_id': allregeneratedImage.id,
+                'regenerated_image': str(allregeneratedImage.regenerated_image),
+                'original_image_id': allregeneratedImage.original_image_id,
+                'original_image_name': allregeneratedImage.original_image_name,
+                'public': allregeneratedImage.public,
                 'created': allregeneratedImage.created.strftime("%d/%m/%Y %H:%M:%S"),
                 'regenerated_at': allregeneratedImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allregeneratedImage.regenerated_at else None,
                 'next_regeneration_at': allregeneratedImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
-            regen_count+=1
             Regen_Image_history.append(tmp)
 
-        jsonn_response = {
-            'Regenerated_Image_count' : regen_count,
-            'Regenerated_Image_data' : Regen_Image_history,
-            #'deposit_history' : diposit_history
+        json_response = {
+            'Regenerated_Image_count': paginator.page.paginator.count,
+            'Regenerated_Image_data': Regen_Image_history,
         }
-        response = Response(jsonn_response, status=status.HTTP_200_OK)
-        
-        # Set the Referrer Policy header
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # response = Response(json_response, status=status.HTTP_200_OK)
 
-        return response
+        # # Set the Referrer Policy header
+        # response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        # return response
+    
+        return paginator.get_paginated_response(json_response)
+
+
+
+
 
 #------------------------------------------------Get All Regenerative Image-------------------------------------------------
     
 
 #------------------------------------------------Get All Original Image-------------------------------------------------
+# class GetAllOriginalImage(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+
+#     @csrf_exempt
+#     def dispatch(self, *args, **kwargs):
+#         return super().dispatch(*args, **kwargs)
+    
+#     def post(self,request):
+#         Original_Image_history = []
+#         user_id = get_user_id_from_token(request)
+#         user = CustomUser.objects.filter(id=user_id).first()    
+#         if not user:
+#             return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+#         Original_count=0
+#         for allOriginalImage in Image.objects.filter(user=user):
+#             tmp = {
+#                 'user' : allOriginalImage.user.email,
+#                 'original_image_id' : allOriginalImage.id,
+#                 'original_image_name' : allOriginalImage.image_name,
+#                 'original_image': str(allOriginalImage.photo),
+#                 'public' : allOriginalImage.public,
+#                 'prompt' : allOriginalImage.prompt,
+#                 # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
+#                 # 'frequency' : allOriginalImage.frequency,#json.loads(history.result.replace("'", "\"")),
+#                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
+#                 'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
+#                 'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
+#             }
+#             Original_count+=1
+#             Original_Image_history.append(tmp)
+
+#         jsonn_response = {
+#             'Original_Image_count' : Original_count,
+#             'Original_Image_data' : Original_Image_history,
+#             #'deposit_history' : diposit_history
+#         }
+#         response = Response(jsonn_response, status=status.HTTP_200_OK)
+
+#         # Set the Referrer Policy header
+#         response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+#         return response
+    
+
 class GetAllOriginalImage(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
 
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
     
     def post(self,request):
-        Original_Image_history = []
         user_id = get_user_id_from_token(request)
         user = CustomUser.objects.filter(id=user_id).first()    
         if not user:
             return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
-        Original_count=0
-        for allOriginalImage in Image.objects.filter(user=user):
+
+        original_images = Image.objects.filter(user=user).order_by('-created')
+        
+        # Paginate the queryset
+        paginator = self.pagination_class()
+        paginated_original_images = paginator.paginate_queryset(original_images, request)
+
+        Original_Image_history = []
+        for allOriginalImage in paginated_original_images:
             tmp = {
-                'user' : allOriginalImage.user.email,
-                'original_image_id' : allOriginalImage.id,
-                'original_image_name' : allOriginalImage.image_name,
+                'user': allOriginalImage.user.email,
+                'original_image_id': allOriginalImage.id,
+                'original_image_name': allOriginalImage.image_name,
                 'original_image': str(allOriginalImage.photo),
-                'public' : allOriginalImage.public,
-                'prompt' : allOriginalImage.prompt,
-                # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
-                # 'frequency' : allOriginalImage.frequency,#json.loads(history.result.replace("'", "\"")),
+                'public': allOriginalImage.public,
+                'prompt': allOriginalImage.prompt,
                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
                 'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
                 'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
             }
-            Original_count+=1
             Original_Image_history.append(tmp)
 
-        jsonn_response = {
-            'Original_Image_count' : Original_count,
-            'Original_Image_data' : Original_Image_history,
-            #'deposit_history' : diposit_history
+        json_response = {
+            'Total_Original_Image_count': paginator.page.paginator.count,
+            'Original_Image_data': Original_Image_history,
         }
-        response = Response(jsonn_response, status=status.HTTP_200_OK)
 
-        # Set the Referrer Policy header
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        return paginator.get_paginated_response(json_response)
 
-        return response
+
+
+
+
+
 #------------------------------------------------Get All Original Image-------------------------------------------------
 
 
@@ -984,6 +1098,7 @@ class AdminUpdateUser(APIView):
 class AdminGetAllRegenrativeImage(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination 
 
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
@@ -998,7 +1113,14 @@ class AdminGetAllRegenrativeImage(APIView):
         
         Regen_Image_history = []  
         regen_count=0
-        for allregeneratedImage in RegeneratedImage.objects.all():
+
+        all_regen = RegeneratedImage.objects.all()
+
+        # Apply pagination to the queryset
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(all_regen, request)
+
+        for allregeneratedImage in result_page:
             tmp = {
                 'user' : allregeneratedImage.user.email,
                 'regenerated_image_id' : allregeneratedImage.id,
@@ -1014,21 +1136,26 @@ class AdminGetAllRegenrativeImage(APIView):
             Regen_Image_history.append(tmp)
 
         jsonn_response = {
-            'Regenerated_Image_count' : regen_count,
+            'Total_Regenerated_Image_count' : paginator.page.paginator.count,
             'Regenerated_Image_data' : Regen_Image_history,
             #'deposit_history' : diposit_history
         }
-        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        # response = Response(jsonn_response, status=status.HTTP_200_OK)
         
-        # Set the Referrer Policy header
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # # Set the Referrer Policy header
+        # response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 
-        return response
+        # return response
+
+        return paginator.get_paginated_response(jsonn_response)
+
+
 
 
 class AdminGetAllOriginalImage(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination 
 
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
@@ -1043,7 +1170,14 @@ class AdminGetAllOriginalImage(APIView):
 
         Original_Image_history = []
         Original_count=0
-        for allOriginalImage in Image.objects.all():
+
+        all_img = Image.objects.all()
+
+        # Apply pagination to the queryset
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(all_img, request)
+
+        for allOriginalImage in result_page:
             tmp = {
                 'user' : allOriginalImage.user.email,
                 'original_image_id' : allOriginalImage.id,
@@ -1059,15 +1193,17 @@ class AdminGetAllOriginalImage(APIView):
             Original_Image_history.append(tmp)
 
         jsonn_response = {
-            'Original_Image_count' : Original_count,
+            'Total_Original_Image_count' : paginator.page.paginator.count,#Original_count,
             'Original_Image_data' : Original_Image_history,
         }
-        response = Response(jsonn_response, status=status.HTTP_200_OK)
+        # response = Response(jsonn_response, status=status.HTTP_200_OK)
 
-        # Set the Referrer Policy header
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # # Set the Referrer Policy header
+        # response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 
-        return response
+        # return response
+    
+        return paginator.get_paginated_response(jsonn_response)
 
 
 
