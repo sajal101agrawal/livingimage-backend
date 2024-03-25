@@ -244,7 +244,7 @@ class UserProfileView(APIView):
             tmp = {
                 'user' : history.user.email,
                 'image_id' : history.id,
-                'image_data' : history.photo.url,
+                'image_data' : str(history.photo),
                 'public' : history.public,
                 'prompt' : history.prompt,
                 'frequency_type' : history.frequency_type,#created.strftime("%d/%m/%Y"),
@@ -426,7 +426,7 @@ class GetPublicOriginalImage(APIView):
         for images in img:
             tmp = {
                 'user' : images.user.email,
-                'original_image' : images.photo.url,
+                'original_image' : str(images.photo),
                 'public' : images.public,
                 'original_at': images.created.strftime("%d/%m/%Y %H:%M:%S") if images.created else None,
             }
@@ -453,7 +453,7 @@ class GetPublicRegenrativeImage(APIView):
         for images in img:
             tmp = {
                 'user' : images.user.email,
-                'regenerated_image' : images.regenerated_image.url,
+                'regenerated_image' : str(images.regenerated_image),
                 'public' : images.public,
                 'regenerated_at': images.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if images.regenerated_at else None,
             }
@@ -493,7 +493,7 @@ class GetAllRegenrativeImage(APIView):
             tmp = {
                 'user' : allregeneratedImage.user.email,
                 'regenerated_image_id' : allregeneratedImage.id,
-                'regenerated_image' : allregeneratedImage.regenerated_image.url,
+                'regenerated_image' : str(allregeneratedImage.regenerated_image),
                 'original_image_id' : allregeneratedImage.original_image_id,
                 'original_image_name' : allregeneratedImage.original_image_name,
                 'public' : allregeneratedImage.public,
@@ -543,7 +543,7 @@ class GetAllOriginalImage(APIView):
                 'user' : allOriginalImage.user.email,
                 'original_image_id' : allOriginalImage.id,
                 'original_image_name' : allOriginalImage.image_name,
-                'original_image': allOriginalImage.photo.url,
+                'original_image': str(allOriginalImage.photo),
                 'public' : allOriginalImage.public,
                 'prompt' : allOriginalImage.prompt,
                 # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
@@ -589,7 +589,7 @@ class GetOneRegenrativeImage(APIView):
             One_Regen_Image = {
                 'user' : allregeneratedImage.user.email,
                 'regenerated_image_id' : allregeneratedImage.id,
-                'regenerated_image' : allregeneratedImage.regenerated_image.url,
+                'regenerated_image' : str(allregeneratedImage.regenerated_image),
                 'original_image_id' : allregeneratedImage.original_image_id,
                 'original_image_name' : allregeneratedImage.original_image_name,
                 'public' : allregeneratedImage.public,
@@ -644,7 +644,7 @@ class GetOneOriginalImage(APIView):
                 'user' : allOriginalImage.user.email,
                 'original_image_id' : allOriginalImage.id,
                 'original_image_name' : allOriginalImage.image_name,
-                'original_image': allOriginalImage.photo.url,
+                'original_image': str(allOriginalImage.photo),
                 'public' : allOriginalImage.public,
                 'prompt' : allOriginalImage.prompt,
                 # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
@@ -882,7 +882,7 @@ class ViewUser(APIView):
                     'original_image_id' : img.id,
                     'user' : img.user.email,
                     'original_image_name' : img.image_name,
-                    'original_image': img.photo.url,
+                    'original_image': str(img.photo),
                     'public' : img.public,
                     'prompt' : img.prompt,
                     'created': img.created.strftime("%d/%m/%Y %H:%M:%S"),
@@ -900,7 +900,7 @@ class ViewUser(APIView):
             One_Regen_Image = {
                     'regenerated_image_id' : regen_img.id,
                     'user' : regen_img.user.email,
-                    'regenerated_image' : regen_img.regenerated_image.url,
+                    'regenerated_image' : str(regen_img.regenerated_image),
                     'original_image_id' : regen_img.original_image_id,
                     'original_image_name' : regen_img.original_image_name,
                     'public' : regen_img.public,
@@ -1002,7 +1002,7 @@ class AdminGetAllRegenrativeImage(APIView):
             tmp = {
                 'user' : allregeneratedImage.user.email,
                 'regenerated_image_id' : allregeneratedImage.id,
-                'regenerated_image' : allregeneratedImage.regenerated_image.url,
+                'regenerated_image' : str(allregeneratedImage.regenerated_image),
                 'original_image_id' : allregeneratedImage.original_image_id,
                 'original_image_name' : allregeneratedImage.original_image_name,
                 'public' : allregeneratedImage.public,
@@ -1048,7 +1048,7 @@ class AdminGetAllOriginalImage(APIView):
                 'user' : allOriginalImage.user.email,
                 'original_image_id' : allOriginalImage.id,
                 'original_image_name' : allOriginalImage.image_name,
-                'original_image': allOriginalImage.photo.url,
+                'original_image': str(allOriginalImage.photo),
                 'public' : allOriginalImage.public,
                 'prompt' : allOriginalImage.prompt,
                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
@@ -1097,7 +1097,7 @@ class AdminGetOneRegenrativeImage(APIView):
             One_Regen_Image = {
                 'user' : allregeneratedImage.user.email,
                 'regenerated_image_id' : allregeneratedImage.id,
-                'regenerated_image' : allregeneratedImage.regenerated_image.url,
+                'regenerated_image' : str(allregeneratedImage.regenerated_image),
                 'original_image_id' : allregeneratedImage.original_image_id,
                 'original_image_name' : allregeneratedImage.original_image_name,
                 'public' : allregeneratedImage.public,
@@ -1158,7 +1158,7 @@ class AdminGetOneOriginalImage(APIView):
                 'user' : allOriginalImage.user.email,
                 'original_image_id' : allOriginalImage.id,
                 'original_image_name' : allOriginalImage.image_name,
-                'original_image': allOriginalImage.photo.url,
+                'original_image': str(allOriginalImage.photo),
                 'public' : allOriginalImage.public,
                 'prompt' : allOriginalImage.prompt,
                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
@@ -1309,7 +1309,7 @@ class DeleteImageAdmin(View):
 
 #----------------------Code copied from Keywordlit Project--------------------------------------------------------------
 
-class UploadImageView(View):
+class UploadImageView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
 
@@ -1331,59 +1331,83 @@ class UploadImageView(View):
             # Set the user before saving the form
             user_id = get_user_id_from_token(request)
             user = CustomUser.objects.filter(id=user_id).first()
-            if user:
-                print("the user is: ",user.email)
-                form.instance.user = user
-                print("form.instance.user :",form.instance.user)
-                frequency = form.cleaned_data.get('frequency')
-                prompt = form.cleaned_data.get('prompt')
-                frequency_type = form.cleaned_data.get('frequency_type')
-                photo = form.cleaned_data.get('photo')
-                public = form.cleaned_data.get('public')
-                
-                print("The details are as follows for image upload")
-                print("frequency:", frequency) 
-                print("prompt:", prompt)
-                print("frequency_type:", frequency_type)
-                print("photo:", photo)
-                print("public:", public)
-                max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
-                    # Check if the size of the uploaded image is less than or equal to the maximum size limit
-                if photo.size > max_size:
-                    return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+            if not user:
+                return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+            print("the user is: ",user.email)
+            # Retrieve the uploaded file from request.FILES
+            photo = request.FILES.get('photo')
+            if not photo:
+                return JsonResponse({'error': 'No file uploaded'}, status=400)
+            form.instance.user = user
+            print("form.instance.user :",form.instance.user)
+            frequency = form.cleaned_data.get('frequency')
+            prompt = form.cleaned_data.get('prompt')
+            frequency_type = form.cleaned_data.get('frequency_type')
+            #photo = form.cleaned_data.get('photo')
+            public = form.cleaned_data.get('public')
+            
+            print("The details are as follows for image upload")
+            print("frequency:", frequency) 
+            print("prompt:", prompt)
+            print("frequency_type:", frequency_type)
+            print("photo:", photo)
+            print("public:", public)
+            max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+                # Check if the size of the uploaded image is less than or equal to the maximum size limit
+            if photo.size > max_size:
+                return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
 
 
-                # Calculate next regeneration datetime
-                next_regeneration_at = calculate_regeneration_time(frequency, frequency_type)
-                image_name=generate_random_string(15)
-                # Save the image file to S3 with the desired file name
-                file_name = f"{image_name}.jpg"  # Assuming the image format is JPG
-                file_path = default_storage.save(file_name, photo)
-                # Save the form data
-                image_instance = form.save(commit=False)
-                image_instance.nextregeneration_at = next_regeneration_at
-                image_instance.image_name=image_name
-                image_instance.photo=file_path
-                image_instance.save()
-               
+            # Calculate next regeneration datetime
+            next_regeneration_at = calculate_regeneration_time(frequency, frequency_type)
+            image_name=generate_random_string(15)
+            # Save the image file to S3 with the desired file name
+            file_name = f"{image_name}.jpg"  # Assuming the image format is JPG
+            file_path = default_storage.save(file_name, photo) # It should be a string so we can split it to our need
+            print("The file path is : ",file_path)
+
+            # https://livingimage-original-images.s3.amazonaws.com/vqEugYeFSOwJFGe.jpg
+            # # For example, let's say you want to save the S3 URL
+            # s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
+            # regenerated_image_url = s3_base_url + file_name
+
+            # Get the URL using the storage backend
+            original_image_url = default_storage.url(file_name)
+            print('The original image url is :',original_image_url)
+
+            edit_url=original_image_url.split('?')[0]
+            print('The Edited url is :',edit_url)
+            
+
+            # try:
+            #     print(original_image_url.split('?')[0])
+            # except:
+            #     pass
 
 
-                History.objects.create(
-                    tag='create',
-                    user=user,
-                    image_data=file_path,
-                    prompt=prompt,
-                    frequency_type=frequency_type,
-                    frequency=frequency,
-                    public=public,
-                    image_name=image_name
-                )
+            # Save the form data
+            image_instance = form.save(commit=False)
+            image_instance.nextregeneration_at = next_regeneration_at
+            image_instance.image_name=image_name
+            image_instance.photo=edit_url #file_path
+            image_instance.save()
+            
 
-                #form.save()
-                #return redirect('/api/dashboard/')
-                return JsonResponse({'Message': 'Image Upload successful.'})
-            else:
-                return JsonResponse({'Message': 'User Not Found'})
+
+            History.objects.create(
+                tag='create',
+                user=user,
+                image_data=edit_url,
+                prompt=prompt,
+                frequency_type=frequency_type,
+                frequency=frequency,
+                public=public,
+                image_name=image_name
+            )
+
+            #form.save()
+            #return redirect('/api/dashboard/')
+            return JsonResponse({'Message': 'Image Upload successful.'})
         else:
             print("Form is invalid")
             print(form.errors)
@@ -1398,19 +1422,24 @@ class UploadImageView(View):
 from django.contrib.auth.decorators import login_required
 
 
-class DeleteImageView(View):
+class DeleteImageView(APIView):
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
     def post(self, request):
-        image_id = request.POST.get('image_id')
         user_id = get_user_id_from_token(request)
         if user_id:
+
+            if not 'image_id' in request.data or not request.data.get('image_id'):
+                return JsonResponse({'error': 'Image not found'}, status=404)
+            image_id = request.data.get("image_id")
+            user = CustomUser.objects.get(id=user_id)
+            image = Image.objects.get(id=image_id, user=user)
+            image_name=image.image_name
+            print('The image id of Image is : ',image_id)
+            print('The image_name of Image is : ',image_name)
             try:
-                user = CustomUser.objects.get(id=user_id)
-                image = Image.objects.get(id=image_id, user=user)
-                image_name=image.image_name
                 # Delete the image file from the S3 bucket
                 s3_key = image.photo.name
                 if default_storage.exists(s3_key):
@@ -1576,7 +1605,10 @@ class RegenerateImageView(APIView):
                 regenerative_at_ = calculate_regeneration_time(original_image.frequency,original_image.frequency_type)
                 # Save the regenerated image to S3 and database
                 user = CustomUser.objects.filter(id=user_id).first()
-                self.save_to_s3(regenerated_image, original_image, user, regenerative_at_)
+                try:
+                    self.save_to_s3(regenerated_image, original_image, user, regenerative_at_)
+                except Exception as e:
+                    return JsonResponse({'Message': f'{str(e)}'}, status=400)
                 return JsonResponse({'Message': 'Regenerated image saved successfully'}, status=200)
             except:
                 return JsonResponse({'Message': 'Image not exist'}, status=400)
@@ -1641,46 +1673,82 @@ class RegenerateImageView(APIView):
         #return regenerated_image
         return  regenerated_image_url
 
+    # def save_to_s3(self, image_url, original_image, user, regenerative_at_):
+    #     #now_utc = datetime.now(pytz.utc)
+    #     # Connect to your S3 bucket using Boto3
+    #     s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+    #     original_image_name=original_image.image_name
+
+    #     # Download the image data from the URL
+    #     image_data = requests.get(image_url).content
+
+    #     # # Wrap the image_data in a BytesIO object
+    #     # image_buffer = BytesIO(image_data)
+        
+    #     # # Upload the binary data to your S3 bucket
+    #     # s3.upload_fileobj(image_buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')
+
+    #     # Upload the binary data to your S3 bucket
+    #     file_path = f'{original_image_name}.png'
+    #     s3.put_object(Body=image_data, 
+    #                   Bucket=settings.AWS_STORAGE_BUCKET_NAME2, 
+    #                   Key=file_path,
+    #                   ContentType='image/png',  
+    #                   ContentDisposition='inline')
+    
+
+
+    #     regenerated_image = RegeneratedImage.objects.create(
+    #         user=user,
+    #         original_image_name=original_image_name,
+    #         original_image_id=original_image.id,
+    #         #regenerated_image=f'regenerated_image_{original_image_name}.png',
+    #         regenerated_image=file_path,#,regenerated_image_filename,
+    #         regenerated_at=datetime.now(pytz.utc),
+    #         public=original_image.public,
+    #         nextregeneration_at=regenerative_at_)
+
+
+    #     original_image.regenerated_at = datetime.now(pytz.utc)
+    #     original_image.nextregeneration_at = regenerative_at_
+    #     original_image.save()
+        
+
+
     def save_to_s3(self, image_url, original_image, user, regenerative_at_):
-        #now_utc = datetime.now(pytz.utc)
-        # Connect to your S3 bucket using Boto3
         s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
-        original_image_name=original_image.image_name
+        original_image_name = original_image.image_name
 
         # Download the image data from the URL
         image_data = requests.get(image_url).content
 
-        # # Wrap the image_data in a BytesIO object
-        # image_buffer = BytesIO(image_data)
-        
-        # # Upload the binary data to your S3 bucket
-        # s3.upload_fileobj(image_buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')
-
         # Upload the binary data to your S3 bucket
         file_path = f'{original_image_name}.png'
         s3.put_object(Body=image_data, 
-                      Bucket=settings.AWS_STORAGE_BUCKET_NAME2, 
-                      Key=file_path,
-                      ContentType='image/png',  
-                      ContentDisposition='inline')
-    
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME2, 
+                    Key=file_path,
+                    ContentType='image/png',  
+                    ContentDisposition='inline')
 
+        # Now, you can save the URL you want to display in the admin interface
+        # For example, let's say you want to save the S3 URL
+        s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME2}.s3.amazonaws.com/"
+        regenerated_image_url = s3_base_url + file_path
 
         regenerated_image = RegeneratedImage.objects.create(
             user=user,
             original_image_name=original_image_name,
             original_image_id=original_image.id,
-            #regenerated_image=f'regenerated_image_{original_image_name}.png',
-            regenerated_image=file_path,#,regenerated_image_filename,
+            regenerated_image=regenerated_image_url,
             regenerated_at=datetime.now(pytz.utc),
             public=original_image.public,
-            nextregeneration_at=regenerative_at_)
-
+            nextregeneration_at=regenerative_at_
+        )
 
         original_image.regenerated_at = datetime.now(pytz.utc)
         original_image.nextregeneration_at = regenerative_at_
         original_image.save()
-        
+
 
         # Optionally, perform any additional processing or logging
 
