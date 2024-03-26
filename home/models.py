@@ -95,7 +95,7 @@ class History(TimeStampModel):
     )
     id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    image_data = models.ImageField(upload_to="myimage")
+    image_data = models.ImageField()#upload_to="myimage")
     image_name = models.CharField(max_length=255)
     # membership = models.CharField(max_length=25)
     prompt = models.TextField()
@@ -145,7 +145,7 @@ class Image(TimeStampModel):
     )
     id=models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    photo = models.ImageField(upload_to="myimage")
+    photo = models.ImageField()#upload_to="myimage")
     image_name = models.CharField(max_length=255)
     prompt = models.TextField(max_length=200,null=True, blank=True)  # PROMPT IS NOW OPTIONAL
     frequency_type = models.CharField(max_length=25, choices=frequency_type_choice)
@@ -164,7 +164,7 @@ class RegeneratedImage(TimeStampModel):
     original_image_id = models.PositiveIntegerField()
     original_image_name = models.CharField(max_length=255)
     public = models.BooleanField(default=False)  # Field from the original image model
-    regenerated_image = models.ImageField(upload_to="regenerated_images")
+    regenerated_image = models.ImageField()#upload_to="regenerated_images")
     regenerated_at = models.DateTimeField(null=True, blank=True)  # Null initially, updated when regenerated image is uploaded
     nextregeneration_at = models.DateTimeField()
 

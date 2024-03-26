@@ -1449,8 +1449,6 @@ class UploadImageView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
 
-
-    # @method_decorator(ensure_csrf_cookie)
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
@@ -1541,6 +1539,13 @@ class UploadImageView(APIView):
                 image_name=image_name
             )
 
+            # Regenerate and save to S3
+            regen_image_url = self.regenerate_image_logic(image_instance)
+
+            # Calculate the regenerative_at datetime based on frequency and frequency_type
+            regenerative_at_ = calculate_regeneration_time(image_instance.frequency,image_instance.frequency_type)
+
+            self.save_to_s3(regen_image_url, image_instance, user, regenerative_at_)
             #form.save()
             #return redirect('/api/dashboard/')
             return JsonResponse({'Message': 'Image Upload successful.'})
@@ -1549,13 +1554,110 @@ class UploadImageView(APIView):
             print(form.errors)
             return JsonResponse({'Message': 'Image Upload Unsuccessful.'}, status=400)
 
-        #     return 'Message Image Upload successful.'
-        # else:
-        #     print("Form is invalid")
-        #     print(form.errors)
-        #     return Response({'Message': 'Image Upload Unsuccessful.'}, status=status.HTTP_400_BAD_REQUEST)#render(request, 'myapp/upload.html', {'form': form})
+    #--------------------------------------------Regenerating Image Logic ---------------------------------------------------------
+
+    def preprocess_image(self, image_path, target_size=(1024, 1024)):
+        from PIL import Image
+        import io
+        print("Hi, I am here")
+        # # Open the image file
+        # with Image.open(image_path) as img:
+        #     # Convert image to RGBA mode
+        #     img = img.convert("RGBA")
+        #     # Resize the image
+        #     resized_img = img.resize(target_size)
+        #     # Create a BytesIO object to store the image data
+        #     img_byte_array = io.BytesIO()
+        #     # Save the image to the BytesIO object in PNG format
+        #     resized_img.save(img_byte_array, format="PNG")
+        #     # Get the bytes from the BytesIO object
+        #     processed_image = img_byte_array.getvalue()
+
+        print("Downloading image from:", image_path)
+        # Download the image from the URL
+        response = requests.get(image_path)
+        if response.status_code != 200:
+            raise Exception("Failed to download image")
+
+        # Open the downloaded image
+        with Image.open(io.BytesIO(response.content)) as img:
+            # Convert image to RGBA mode
+            img = img.convert("RGBA")
+            # Resize the image
+            resized_img = img.resize(target_size)
+            # Create a BytesIO object to store the image data
+            img_byte_array = io.BytesIO()
+            # Save the image to the BytesIO object in PNG format
+            resized_img.save(img_byte_array, format="PNG")
+            # Get the bytes from the BytesIO object
+            processed_image = img_byte_array.getvalue()
+        return processed_image
+
+
+
+    def generate_image(self, image_path):
+        # Preprocess the image
+        openai_api_key=openai_account.objects.first()
+        api_key=openai_api_key.key
+        preprocessed_image = self.preprocess_image(image_path)
+        client = OpenAI(api_key=api_key)
+        response = client.images.create_variation(
+        image=preprocessed_image,
+        n=2,
+        size="1024x1024"
+        )
+
+        generated_image_url = response.data[0].url
+
+        return generated_image_url
+
+
+    def regenerate_image_logic(self, original_image):
+        image_path=str(original_image.photo)
+        regenerated_image_url = self.generate_image(image_path)
+        return  regenerated_image_url
+
+    def save_to_s3(self, image_url, original_image, user, regenerative_at_):
+        s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+        original_image_name = original_image.image_name
+
+        # Download the image data from the URL
+        image_data = requests.get(image_url).content
+
+        # Upload the binary data to your S3 bucket
+        file_path = f'{original_image_name}.png'
+        s3.put_object(Body=image_data, 
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME2, 
+                    Key=file_path,
+                    ContentType='image/png',  
+                    ContentDisposition='inline')
+
+        s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME2}.s3.amazonaws.com/"
+        regenerated_image_url = s3_base_url + file_path
+
+        regenerated_image = RegeneratedImage.objects.create(
+            user=user,
+            original_image_name=original_image_name,
+            original_image_id=original_image.id,
+            regenerated_image=regenerated_image_url,
+            regenerated_at=datetime.now(pytz.utc),
+            public=original_image.public,
+            nextregeneration_at=regenerative_at_
+        )
+
+        original_image.regenerated_at = datetime.now(pytz.utc)
+        original_image.nextregeneration_at = regenerative_at_
+        original_image.save()
+
+                
+
+#--------------------------------------------Regenerating Image Logic ---------------------------------------------------------
+
+
+
 
 from django.contrib.auth.decorators import login_required
+
 
 
 class DeleteImageView(APIView):
@@ -1564,53 +1666,45 @@ class DeleteImageView(APIView):
         return super().dispatch(*args, **kwargs)
 
     def post(self, request):
-        user_id = get_user_id_from_token(request)
-        if user_id:
+        try:
+            user_id = get_user_id_from_token(request)
+            if user_id:
+                if 'image_id' not in request.data or not request.data.get('image_id'):
+                    return JsonResponse({'error': 'Image not found'}, status=404)
+                
+                image_id = request.data.get("image_id")
+                user = CustomUser.objects.filter(id=user_id).first()
+                image = Image.objects.get(id=image_id, user=user)
+                image_name = image.image_name
+                s3_key = str(image.photo)
 
-            if not 'image_id' in request.data or not request.data.get('image_id'):
-                return JsonResponse({'error': 'Image not found'}, status=404)
-            image_id = request.data.get("image_id")
-            user = CustomUser.objects.get(id=user_id)
-            image = Image.objects.get(id=image_id, user=user)
-            image_name=image.image_name
-            print('The image id of Image is : ',image_id)
-            print('The image_name of Image is : ',image_name)
-            try:
-                # Delete the image file from the S3 bucket
-                s3_key = image.photo.name
-                if default_storage.exists(s3_key):
-                    default_storage.delete(s3_key)
+                # if default_storage.exists(s3_key):
+                default_storage.delete(s3_key)
 
-                    # Create a history record before deleting the image object
-                    History.objects.create(
-                        tag='delete',
-                        user=user,
-                        image_data=image.photo,
-                        prompt=image.prompt,
-                        frequency_type=image.frequency_type,
-                        frequency=image.frequency,
-                        public=image.public,
-                        image_name=image_name
-                    )
+                History.objects.create(
+                    tag='delete',
+                    user=user,
+                    image_data=image.photo,
+                    prompt=image.prompt,
+                    frequency_type=image.frequency_type,
+                    frequency=image.frequency,
+                    public=image.public,
+                    image_name=image_name
+                )
 
-                    # Delete the image object from the database
-                    image.delete()
+                image.delete()
 
-                    return JsonResponse({'Message': 'Image deleted successfully.'})
-                else:
-                    return JsonResponse({'Message': 'Image not found.'}, status=404)
-            except Image.DoesNotExist:
-                return JsonResponse({'Message': 'Image not found.'}, status=404)
-            except CustomUser.DoesNotExist:
-                return JsonResponse({'Message': 'User not found.'}, status=403)
-            except ClientError as e:
-                return JsonResponse({'Message': f'An error occurred: {str(e)}'}, status=500)
-        else:
-            return JsonResponse({'Message': 'User Details not found.'}, status=403)
-
-
-
-
+                return JsonResponse({'Message': 'Image deleted successfully.'})
+                # else:
+                #     return JsonResponse({'Message': 'Image file not found in S3.'}, status=404)
+            else:
+                return JsonResponse({'Message': 'User Details not found.'}, status=403)
+        except ObjectDoesNotExist:
+            return JsonResponse({'Message': 'Image or User not found.'}, status=404)
+        except ClientError as e:
+            return JsonResponse({'Message': f'An error occurred: {str(e)}'}, status=500)
+        except Exception as e:
+            return JsonResponse({'Message': f'An error occurred: {str(e)}'}, status=500)
 
 
 
@@ -1627,8 +1721,12 @@ class UpdateImageView(View):
         image_id = request.POST.get('image_id')
         user_id = get_user_id_from_token(request)
         if user_id:
+            if not 'image_id' in request.POST or not request.POST.get('image_id'):
+                return JsonResponse({'error': 'Image not found'}, status=404)
             try:
-                user = CustomUser.objects.get(id=user_id)
+                user = CustomUser.objects.filter(id=user_id).first()
+                if not user:
+                    return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
                 image = Image.objects.get(id=image_id, user=user)
                 image_name=image.image_name
                 # Update image details
@@ -1649,15 +1747,7 @@ class UpdateImageView(View):
                     # Check if the size of the uploaded image is less than or equal to the maximum size limit
                     if new_image_data.size > max_size:
                         return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
-                    # Delete the old image file from S3
-                    # if image.photo:
-                    #     image.photo.delete(save=False)
-                    # # Continue processing the uploaded image
-                    # # Save the new image file to the model
-                    # #image.photo.save(new_image_data, new_image_data, save=True)
-                    # image.photo.save(new_image_data.name, new_image_data, save=True)
-                    #image.photo = new_image_data
-                    image.photo.save(image.image_name, new_image_data, save=True)
+                    image.photo.save(image.image_name +'.jpg', new_image_data, save=True)
                     #image.save()
                     
                 # Calculate next regeneration datetime if both frequency and frequency_type are provided
@@ -1674,13 +1764,20 @@ class UpdateImageView(View):
                     frequency=image.frequency,
                     public=image.public,
                     image_name=image_name)
+                s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
+                edit_image_url = s3_base_url + image.image_name +'.jpg'
+                image.photo = edit_image_url
                 image.save()
 
                 return JsonResponse({'Message': 'Image details updated successfully.'})
+            
             except Image.DoesNotExist:
                 return JsonResponse({'Message': 'Image not found.'}, status=404)
             except CustomUser.DoesNotExist:
                 return JsonResponse({'Message': 'User not found.'}, status=403)
+            except ValidationError as e:
+                return JsonResponse({'Message': f'Validation error: {str(e)}'}, status=400)
+        
         else:
             return JsonResponse({'Message': 'User Details not found.'}, status=403)
 
