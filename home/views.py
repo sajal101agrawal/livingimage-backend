@@ -1546,6 +1546,10 @@ class UploadImageView(APIView):
             regenerative_at_ = calculate_regeneration_time(image_instance.frequency,image_instance.frequency_type)
 
             self.save_to_s3(regen_image_url, image_instance, user, regenerative_at_)
+
+            # Deduct User Credit
+            user.credit= user.credit - 1
+            user.save()
             #form.save()
             #return redirect('/api/dashboard/')
             return JsonResponse({'Message': 'Image Upload successful.'})
@@ -1840,6 +1844,8 @@ class RegenerateImageView(APIView):
                 user = CustomUser.objects.filter(id=user_id).first()
                 try:
                     self.save_to_s3(regenerated_image, original_image, user, regenerative_at_)
+                    user.credit= user.credit - 1
+                    user.save()
                 except Exception as e:
                     return JsonResponse({'Message': f'{str(e)}'}, status=400)
                 return JsonResponse({'Message': 'Regenerated image saved successfully'}, status=200)
@@ -1905,47 +1911,6 @@ class RegenerateImageView(APIView):
 
         #return regenerated_image
         return  regenerated_image_url
-
-    # def save_to_s3(self, image_url, original_image, user, regenerative_at_):
-    #     #now_utc = datetime.now(pytz.utc)
-    #     # Connect to your S3 bucket using Boto3
-    #     s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
-    #     original_image_name=original_image.image_name
-
-    #     # Download the image data from the URL
-    #     image_data = requests.get(image_url).content
-
-    #     # # Wrap the image_data in a BytesIO object
-    #     # image_buffer = BytesIO(image_data)
-        
-    #     # # Upload the binary data to your S3 bucket
-    #     # s3.upload_fileobj(image_buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')
-
-    #     # Upload the binary data to your S3 bucket
-    #     file_path = f'{original_image_name}.png'
-    #     s3.put_object(Body=image_data, 
-    #                   Bucket=settings.AWS_STORAGE_BUCKET_NAME2, 
-    #                   Key=file_path,
-    #                   ContentType='image/png',  
-    #                   ContentDisposition='inline')
-    
-
-
-    #     regenerated_image = RegeneratedImage.objects.create(
-    #         user=user,
-    #         original_image_name=original_image_name,
-    #         original_image_id=original_image.id,
-    #         #regenerated_image=f'regenerated_image_{original_image_name}.png',
-    #         regenerated_image=file_path,#,regenerated_image_filename,
-    #         regenerated_at=datetime.now(pytz.utc),
-    #         public=original_image.public,
-    #         nextregeneration_at=regenerative_at_)
-
-
-    #     original_image.regenerated_at = datetime.now(pytz.utc)
-    #     original_image.nextregeneration_at = regenerative_at_
-    #     original_image.save()
-        
 
 
     def save_to_s3(self, image_url, original_image, user, regenerative_at_):

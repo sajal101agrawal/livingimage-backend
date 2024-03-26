@@ -58,21 +58,11 @@ def regenerate_image(image_id):
 
 
     def generate_image(image_path):
-    #def generate_image(prompt, image_path):
-        # Preprocess the image
         openai_api_key=openai_account.objects.first()
         api_key=openai_api_key.key
         preprocessed_image = preprocess_image(image_path)
         client = OpenAI(api_key=api_key)
 
-        # Generate image based on prompt and preprocessed image
-        # response = client.images.edit(
-        #     model="dall-e-2",
-        #     image=preprocessed_image,
-        #     prompt=prompt,
-        #     n=1,
-        #     size="1024x1024"
-        # )
 
 
         response = client.images.create_variation(
@@ -91,48 +81,37 @@ def regenerate_image(image_id):
         #prompt=original_image.prompt
         image_path=original_image.photo
         regenerated_image_url = generate_image(image_path)
-        #regenerated_image_url = generate_image(prompt, image_path)
-        #return regenerated_image
         return  regenerated_image_url
 
-    def save_to_s3(image_url, original_image, user, regenerative_at_):
-        #now_utc = datetime.now(pytz.utc)
-        # Connect to your S3 bucket using Boto3
+    def save_to_s3(image_url, original_image, user, regenerative_at_):        
         s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
-        original_image_name=original_image.image_name
-        # Convert the regenerated image to binary datas
-        # with BytesIO() as buffer:
-            # Download the image data from the URL
+        original_image_name = original_image.image_name
+
+        # Download the image data from the URL
         image_data = requests.get(image_url).content
 
-        # # Wrap the image_data in a BytesIO object
-        # image_buffer = BytesIO(image_data)
-        
-        # # Upload the binary data to your S3 bucket
-        # s3.upload_fileobj(image_buffer, settings.AWS_STORAGE_BUCKET_NAME2, f'regenerated_image_{original_image_name}.png')
-
-
         # Upload the binary data to your S3 bucket
+        file_path = f'{original_image_name}.png'
         s3.put_object(Body=image_data, 
                     Bucket=settings.AWS_STORAGE_BUCKET_NAME2, 
-                    Key=f'regenerated_image_{original_image_name}.png',
-                    ContentType='image/png',  # Set the content type to image/png
+                    Key=file_path,
+                    ContentType='image/png',  
                     ContentDisposition='inline')
-                    #ACL='public-read')  # Set ACL to 'public-read'
-        
-        regenerated_image_filename = f'regenerated_image_{original_image_name}.png'
 
-
+        # Now, you can save the URL you want to display in the admin interface
+        # For example, let's say you want to save the S3 URL
+        s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME2}.s3.amazonaws.com/"
+        regenerated_image_url = s3_base_url + file_path
 
         regenerated_image = RegeneratedImage.objects.create(
             user=user,
             original_image_name=original_image_name,
             original_image_id=original_image.id,
-            regenerated_image=regenerated_image_filename, #f'regenerated_image_{original_image_name}.png',
+            regenerated_image=regenerated_image_url,
             regenerated_at=datetime.now(pytz.utc),
             public=original_image.public,
-            nextregeneration_at=regenerative_at_)
-        
+            nextregeneration_at=regenerative_at_
+        )
 
         original_image.regenerated_at = datetime.now(pytz.utc)
         original_image.nextregeneration_at = regenerative_at_
@@ -145,9 +124,6 @@ def regenerate_image(image_id):
         # Call the logic to regenerate and save the image here
 
         # LOGIC 
-
-        # Fetch the original image details from the database
-        #original_image = Image.objects.get(id=image_id, user__id=user_id)
         # Apply your regeneration logic here
         regenerated_image = regenerate_image_logic(original_image)
         # Calculate the regenerative_at datetime based on frequency and frequency_type
@@ -155,6 +131,8 @@ def regenerate_image(image_id):
         # Save the regenerated image to S3 and database
         user = original_image.user  #  CustomUser.objects.filter(id=user_id).first()
         save_to_s3(regenerated_image, original_image, user, regenerative_at_)
+        user.credit= user.credit - 1
+        user.save()
         return {'Message': f'Regenerated image {image_id} successfully'}
     
         # LOGIC 
@@ -164,15 +142,6 @@ def regenerate_image(image_id):
         return {'Message': 'Image not found'}
 
 
-# @app.task#(name="Find_Next_Regen_Datetime")
-# def find_next_regeneration_datetime():
-#     from home.models import Image 
-#     # Query the database for images whose nextregeneration_at time has passed
-#     images_to_regenerate = Image.objects.filter(nextregeneration_at__lte=datetime.now(pytz.utc))
-    
-#     # Schedule regeneration tasks for each image
-#     for image in images_to_regenerate:
-#         regenerate_image.apply_async(args=[image.id], countdown=0)  # Execute immediately
 
 # Get the logger
 logger = logging.getLogger(__name__)
@@ -182,21 +151,7 @@ logger = logging.getLogger(__name__)
 @shared_task
 def find_next_regeneration_datetime():
     logger.info("Received task to find next regeneration datetime.")  
-    # try:
-    #     from home.models import Image 
-    #     from datetime import timedelta
-    #     images_to_regenerate = Image.objects.all()
-    #     # # Schedule regeneration tasks for each image
-    #     # for image in images_to_regenerate:
-    #     #     # Assuming you have defined a task named 'regenerate_image'
-    #     #     task = regenerate_image.apply_async(args=[image.id])
-    #     #     logger.info(f"Scheduled regeneration task for image ID: {image.id}, Task ID: {task.id}")
-
-    #     return f'Scheduled regeneration tasks for {len(images_to_regenerate)} images'
-    # except:
-    #     return "Error Happend"
-
-
+ 
     try:
         from home.models import Image 
         from datetime import timedelta
