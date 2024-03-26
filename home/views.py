@@ -423,7 +423,7 @@ from django.views.decorators.csrf import csrf_exempt
 class GetPublicOriginalImage(APIView):
     pagination_class = PageNumberPagination  # Add pagination class
     def get(self, request):
-        img = Image.objects.filter(public=True)
+        img = Image.objects.filter(public=True).order_by('-created')
         paginator = self.pagination_class()
         result_page = paginator.paginate_queryset(img, request)
         orig_Image_history=[]
@@ -454,7 +454,7 @@ class GetPublicOriginalImage(APIView):
 class GetPublicRegenrativeImage(APIView):
     pagination_class = PageNumberPagination  # Add pagination class
     def get(self, request):
-        img = RegeneratedImage.objects.filter(public=True)
+        img = RegeneratedImage.objects.filter(public=True).order_by('-created')
         # Apply pagination to the queryset
         paginator = self.pagination_class()
         result_page = paginator.paginate_queryset(img, request)
@@ -545,7 +545,7 @@ class GetAllRegenrativeImage(APIView):
         if not user:
             return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        regenerated_images = RegeneratedImage.objects.filter(user=user)
+        regenerated_images = RegeneratedImage.objects.filter(user=user).order_by('-created')
 
         # Apply pagination to the queryset
         paginator = self.pagination_class()
@@ -1114,7 +1114,7 @@ class AdminGetAllRegenrativeImage(APIView):
         Regen_Image_history = []  
         regen_count=0
 
-        all_regen = RegeneratedImage.objects.all()
+        all_regen = RegeneratedImage.objects.all().order_by('-created')
 
         # Apply pagination to the queryset
         paginator = self.pagination_class()
@@ -1171,7 +1171,7 @@ class AdminGetAllOriginalImage(APIView):
         Original_Image_history = []
         Original_count=0
 
-        all_img = Image.objects.all()
+        all_img = Image.objects.all().order_by('-created')
 
         # Apply pagination to the queryset
         paginator = self.pagination_class()
