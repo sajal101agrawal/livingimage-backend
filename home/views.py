@@ -1646,7 +1646,8 @@ class UploadImageView(APIView):
             regenerated_image=regenerated_image_url,
             regenerated_at=datetime.now(pytz.utc),
             public=original_image.public,
-            nextregeneration_at=regenerative_at_
+            nextregeneration_at=regenerative_at_,
+            original_image_key_id=original_image  # Set the foreign key
         )
 
         original_image.regenerated_at = datetime.now(pytz.utc)
@@ -1940,7 +1941,8 @@ class RegenerateImageView(APIView):
             regenerated_image=regenerated_image_url,
             regenerated_at=datetime.now(pytz.utc),
             public=original_image.public,
-            nextregeneration_at=regenerative_at_
+            nextregeneration_at=regenerative_at_,
+            original_image_key_id=original_image  # Set the foreign key
         )
 
         original_image.regenerated_at = datetime.now(pytz.utc)

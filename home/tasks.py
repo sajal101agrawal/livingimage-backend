@@ -110,7 +110,8 @@ def regenerate_image(image_id):
             regenerated_image=regenerated_image_url,
             regenerated_at=datetime.now(pytz.utc),
             public=original_image.public,
-            nextregeneration_at=regenerative_at_
+            nextregeneration_at=regenerative_at_,
+            original_image_key_id=original_image  # Set the foreign key
         )
 
         original_image.regenerated_at = datetime.now(pytz.utc)

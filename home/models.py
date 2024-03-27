@@ -156,7 +156,7 @@ class Image(TimeStampModel):
     user_image_name=models.CharField(max_length=250, null =True, blank =True)
     tag=models.CharField(max_length=200, null =True, blank =True)
     description=models.TextField( null =True, blank =True)
-
+ 
 
 class RegeneratedImage(TimeStampModel):
     id = models.BigAutoField(primary_key=True)
@@ -167,6 +167,7 @@ class RegeneratedImage(TimeStampModel):
     regenerated_image = models.ImageField()#upload_to="regenerated_images")
     regenerated_at = models.DateTimeField(null=True, blank=True)  # Null initially, updated when regenerated image is uploaded
     nextregeneration_at = models.DateTimeField()
+    original_image_key_id = models.ForeignKey(Image, on_delete=models.CASCADE, related_name='regenerated_images')
 
     def __str__(self):
         return f"Regenerated Image {self.id} for User {self.user.email}"
