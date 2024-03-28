@@ -38,12 +38,37 @@ def regenerate_image(image_id):
     from home.views import calculate_regeneration_time
 
     # LOGIC FUNCTION
+    # def preprocess_image(image_path, target_size=(1024, 1024)):
+    #     from PIL import Image
+    #     import io
+    #     print("Hi, I am here")
+    #     # Open the image file
+    #     with Image.open(image_path) as img:
+    #         # Convert image to RGBA mode
+    #         img = img.convert("RGBA")
+    #         # Resize the image
+    #         resized_img = img.resize(target_size)
+    #         # Create a BytesIO object to store the image data
+    #         img_byte_array = io.BytesIO()
+    #         # Save the image to the BytesIO object in PNG format
+    #         resized_img.save(img_byte_array, format="PNG")
+    #         # Get the bytes from the BytesIO object
+    #         processed_image = img_byte_array.getvalue()
+    #     return processed_image
+
+
     def preprocess_image(image_path, target_size=(1024, 1024)):
         from PIL import Image
         import io
         print("Hi, I am here")
-        # Open the image file
-        with Image.open(image_path) as img:
+        print("Downloading image from:", image_path)
+        # Download the image from the URL
+        response = requests.get(image_path)
+        if response.status_code != 200:
+            raise Exception("Failed to download image")
+
+        # Open the downloaded image
+        with Image.open(io.BytesIO(response.content)) as img:
             # Convert image to RGBA mode
             img = img.convert("RGBA")
             # Resize the image
@@ -57,14 +82,12 @@ def regenerate_image(image_id):
         return processed_image
 
 
+
     def generate_image(image_path):
         openai_api_key=openai_account.objects.first()
         api_key=openai_api_key.key
         preprocessed_image = preprocess_image(image_path)
         client = OpenAI(api_key=api_key)
-
-
-
         response = client.images.create_variation(
         image=preprocessed_image,
         n=2,
@@ -79,7 +102,7 @@ def regenerate_image(image_id):
 
     def regenerate_image_logic(original_image):
         #prompt=original_image.prompt
-        image_path=original_image.photo
+        image_path=str(original_image.photo)
         regenerated_image_url = generate_image(image_path)
         return  regenerated_image_url
 
@@ -98,8 +121,6 @@ def regenerate_image(image_id):
                     ContentType='image/png',  
                     ContentDisposition='inline')
 
-        # Now, you can save the URL you want to display in the admin interface
-        # For example, let's say you want to save the S3 URL
         s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME2}.s3.amazonaws.com/"
         regenerated_image_url = s3_base_url + file_path
 
