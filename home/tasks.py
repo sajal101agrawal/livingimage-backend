@@ -108,6 +108,7 @@ def regenerate_image(image_id):
 
     def save_to_s3(image_url, original_image, user, regenerative_at_):        
         s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+        original_image_id = original_image.id
         original_image_name = original_image.image_name
 
         # Download the image data from the URL
@@ -124,16 +125,22 @@ def regenerate_image(image_id):
         s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME2}.s3.amazonaws.com/"
         regenerated_image_url = s3_base_url + file_path
 
-        regenerated_image = RegeneratedImage.objects.create(
-            user=user,
-            original_image_name=original_image_name,
-            original_image_id=original_image.id,
-            regenerated_image=regenerated_image_url,
-            regenerated_at=datetime.now(pytz.utc),
-            public=original_image.public,
-            nextregeneration_at=regenerative_at_,
-            original_image_key_id=original_image  # Set the foreign key
-        )
+        regen_image=RegeneratedImage.objects.filter(original_image_id=original_image_id).first()
+
+        regen_image.nextregeneration_at=regenerative_at_
+        regen_image.regenerated_at=datetime.now(pytz.utc)
+        regen_image.save()
+
+        # regenerated_image = RegeneratedImage.objects.create(
+        #     user=user,
+        #     original_image_name=original_image_name,
+        #     original_image_id=original_image.id,
+        #     regenerated_image=regenerated_image_url,
+        #     regenerated_at=datetime.now(pytz.utc),
+        #     public=original_image.public,
+        #     nextregeneration_at=regenerative_at_,
+        #     original_image_key_id=original_image  # Set the foreign key
+        # )
 
         original_image.regenerated_at = datetime.now(pytz.utc)
         original_image.nextregeneration_at = regenerative_at_
