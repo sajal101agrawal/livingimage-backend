@@ -1486,6 +1486,11 @@ class UploadImageView(APIView):
             print("frequency_type:", frequency_type)
             print("photo:", photo)
             print("public:", public)
+
+            print("Secret Key",settings.AWS_SECRET_ACCESS_KEY)
+            print("Access Key",settings.AWS_ACCESS_KEY_ID)
+
+
             max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
                 # Check if the size of the uploaded image is less than or equal to the maximum size limit
             if photo.size > max_size:
@@ -1662,7 +1667,7 @@ class UploadImageView(APIView):
 
 
 from django.contrib.auth.decorators import login_required
-
+from django.core.files.storage import get_storage_class
 
 
 class DeleteImageView(APIView):
@@ -1681,9 +1686,27 @@ class DeleteImageView(APIView):
                 user = CustomUser.objects.filter(id=user_id).first()
                 image = Image.objects.get(id=image_id, user=user)
                 image_name = image.image_name
-                s3_key = str(image.photo)
+                #s3_key = str(image.photo)
+                s3_key = str(image.image_name)+".jpg"
+                print('The original Image S3 Key is: ',s3_key)
 
-                # if default_storage.exists(s3_key):
+                
+# ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
+                # Fetch and delete the corresponding regenerated image from the S3 bucket
+                regenerated_image = RegeneratedImage.objects.filter(original_image_key_id=image)
+                if regenerated_image:
+                    regenerated_s3_key = str(regenerated_image[0].original_image_name)+'.png'
+                    # Delete from the regenerated image bucket
+                    regenerated_bucket = settings.AWS_STORAGE_BUCKET_NAME2
+                    #regenerated_storage = get_storage_class()(bucket=regenerated_bucket)
+                    regenerated_storage = get_storage_class("storages.backends.s3boto3.S3Boto3Storage")()
+                    regenerated_storage.bucket_name = regenerated_bucket
+                    regenerated_storage.delete(regenerated_s3_key)
+                    print(" THE REGENERATED IMAGE HAS BEEN DELETD",str(regenerated_image[0].original_image_name))
+
+# ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
+
+
                 default_storage.delete(s3_key)
 
                 History.objects.create(
@@ -1696,6 +1719,10 @@ class DeleteImageView(APIView):
                     public=image.public,
                     image_name=image_name
                 )
+
+                # s3_key = image.image_name +'.png'  Regenerated Image
+
+
 
                 image.delete()
 
