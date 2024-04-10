@@ -101,7 +101,7 @@ class UserRegistrationView(APIView):
             except ValidationError as e:
                 return Response({'Message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response({"email": 'Email verification code has been set', 'Message': 'Verify your account'},
+            return Response({"email": f'{user.email}', 'Message': ' Email verification code has been sent, Verify your account'},
                             status=status.HTTP_201_CREATED)
 
 
