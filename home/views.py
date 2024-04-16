@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .forms import ImageForm, ProfilePicForm
+from .forms import ImageForm#, ProfilePicForm
 from .models import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -308,54 +308,93 @@ class GetUserProfilePic(APIView):
         try: 
             photo = user.profile_photo
 
-            return Response({'Message': 'Profile Photo Fetched successfully.', 'Profile_Picture':str(photo)}, status=status.HTTP_200_OK)
+            return Response({'Message': 'Profile Photo Fetched successfully.', 'Profile_Picture': 'http://127.0.0.1:8000/media/'+ str(user.profile_photo) }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Message': f'Profile Photo Fetching Unsuccessful, {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
 class SetUserProfilePic(APIView):
-    renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
 
-    # @csrf_exempt
-    # def dispatch(self, *args, **kwargs):
-    #     return super().dispatch(*args, **kwargs)
-    
     def post(self, request):
-        form = ProfilePicForm(request.POST, request.FILES)
-        if form.is_valid():
-            try:
-                # Set the user before saving the form
-                user_id = get_user_id_from_token(request)
-                user = CustomUser.objects.filter(id=user_id).first()
-                if not user:
-                    return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
-                print("the user is: ",user.email)
-                # Retrieve the uploaded file from request.FILES
-                photo = request.FILES.get('photo')
-                if not photo:
-                    return JsonResponse({'Message': 'No file uploaded'}, status=400)
-                print("photo:", photo)
-                max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
-                    # Check if the size of the uploaded image is less than or equal to the maximum size limit
-                if photo.size > max_size:
-                    return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+        try:
+            # Retrieve the authenticated user
+            user = request.user
+            
+            # Retrieve the uploaded file from request.FILES
+            profile_photo = request.FILES.get('photo')
+            
+            if not profile_photo:
+                return JsonResponse({'Message': 'No file uploaded'}, status=400)
+            
+            # Check if the size of the uploaded image is within the limit
+            max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+            if profile_photo.size > max_size:
+                return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
 
-                user.profile_photo=photo
+            # Save the profile photo to the user's profile_photo field
+            user.profile_photo = profile_photo
+            user.save()
 
-                # form.save(commit=True)
+            # Construct the local file path to save the uploaded photo
+            media_root = settings.MEDIA_ROOT  # Get the MEDIA_ROOT from settings
+            profile_pic_dir = os.path.join(media_root, 'profile_pic')  # Join MEDIA_ROOT with 'profile_pic'
+            file_path = os.path.join(profile_pic_dir, profile_photo.name)  # Join with the uploaded file name
 
-                # Calculate next regeneration datetime
-                # image_name=generate_random_string(15)
-                    
-                user.save()
-                return JsonResponse({'Message': 'Profile Pic Update Successful.'})
-            except Exception as e:
-                return JsonResponse({'Message': f'Profile Pic Update Failed, {str(e)}'}, status=400)
+            # Create directories if they don't exist
+            os.makedirs(profile_pic_dir, exist_ok=True)
 
-        else:
-            print("Form is invalid")
-            print(form.errors)
-            return JsonResponse({'Message': f'Profile Pic Update Failed, {str(form.errors)}'}, status=400)
+            # Save the file to the local filesystem
+            with open(file_path, 'wb') as f:
+                for chunk in profile_photo.chunks():
+                    f.write(chunk)
+
+            return JsonResponse({'Message': 'Profile Pic Update Successful.'})
+        except Exception as e:
+            return JsonResponse({'Message': f'Profile Pic Update Failed, {str(e)}'}, status=400)
+
+
+# class SetUserProfilePic(APIView):
+#     from django.utils.decorators import method_decorator
+#     from django.views.decorators.csrf import csrf_exempt
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+#     @method_decorator(csrf_exempt)
+#     def dispatch(self, *args, **kwargs):
+#         return super().dispatch(*args, **kwargs)
+
+#     def post(self, request):
+#         # form = ProfilePicForm(request.POST, request.FILES)
+#         # if form.is_valid():
+#         try:
+#             # Retrieve the authenticated user
+#             user_id = get_user_id_from_token(request)
+#             user = CustomUser.objects.filter(id=user_id).first()
+#             if not user:
+#                 return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+#             # Retrieve the uploaded file from form.cleaned_data
+#             profile_photo = request.FILES.get('photo')#form.cleaned_data['profile_photo']
+#             print("I AM TILL HERE DONE 11111111")
+#             if not profile_photo or not 'photo' in request.FILES:
+#                 return JsonResponse({'Message': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+            
+#             # Check if the size of the uploaded image is within the limit
+#             max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+#             if profile_photo.size > max_size:
+#                 return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=status.HTTP_400_BAD_REQUEST)
+
+#             print("I AM TILL HERE DONE")
+
+#             # Save the profile photo to the user's profile_photo field
+#             user.profile_photo = profile_photo
+#             user.save()
+
+#             return JsonResponse({'Message': 'Profile Pic Update Successful.'})
+#         except Exception as e:
+#             return JsonResponse({'Message': f'Profile Pic Update Failed, {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        # else:
+        #     # Form is invalid, return error details
+        #     return JsonResponse({'Message': f'Profile Pic Update Failed, Invalid form data: {form.errors}'}, status=status.HTTP_400_BAD_REQUEST)
 
 # ------------------------------------- USER PROFILE PICTURE --------------------------------------------------------------------
 

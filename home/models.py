@@ -69,7 +69,7 @@ class CustomUser(AbstractUser,TimeStampModel):
     credit = models.BigIntegerField(default=100)
     #Mobile_number = models.IntegerField(default=0)
     #gender = models.CharField(max_length=25, choices=GENDER, null=True, blank=True)
-    profile_photo = models.ImageField(upload_to='profile_pic/', default='media\default_profile_pic\default-user-profile.jpg')
+    profile_photo = models.ImageField(upload_to='profile_pic/', default='default-user-profile.jpg')
     REQUIRED_FIELDS = ["email","is_user_verified"]
 
     objects = UserManager()
