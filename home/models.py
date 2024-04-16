@@ -215,7 +215,7 @@ class PaymentRecord(TimeStampModel):
 class CreditHistory(TimeStampModel):
     id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    total_credits = models.IntegerField()
+    total_credits_deducted = models.IntegerField()
     type_of_transaction = models.CharField(max_length=100)
     date_time = models.DateTimeField()
     payment_id = models.CharField(max_length=100)

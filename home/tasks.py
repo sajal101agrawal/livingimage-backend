@@ -1,7 +1,7 @@
 # tasks.py
 from livingimage.celery import Celery
 from celery import shared_task
-#from home.models import *
+from home.models import CreditHistory
 # from home.views import calculate_regeneration_time
 from django.conf import settings
 from datetime import datetime
@@ -169,6 +169,19 @@ def regenerate_image(image_id):
         save_to_s3(regenerated_image, original_image, user, regenerative_at_)
         user.credit= user.credit - 1
         user.save()
+
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+        # Record the credit deduction history
+        deduction_description = f"Deducted 1 credit for regenerating image '{original_image.image_name}'"
+        CreditHistory.objects.create(
+            user=user,
+            total_credits_deducted=1,
+            type_of_transaction="Credit Deduction",
+            date_time=datetime.now(pytz.utc),
+            payment_id="",  # You can leave this blank for credit deductions
+            description=deduction_description
+        )
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
         return {'Message': f'Regenerated image {image_id} successfully'}
     
         # LOGIC 

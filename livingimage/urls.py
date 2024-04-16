@@ -16,7 +16,7 @@ urlpatterns = [
     path('api/credit-pricing/', CreditPricingAPIView.as_view(), name='credit_pricing'), #CREDIT
     path('api/record-payment/', RecordPaymentAPIView.as_view()), #PAYMENT
     path('api/get-payment-history/', GetPaymentHistoryAPIView.as_view()), #PAYMENT
-    path('api/get-credit-history/', GetCreditHistoryAPIView.as_view()), #PAYMENT
+    # path('api/get-credit-history/', GetCreditHistoryAPIView.as_view()), #PAYMENT
 
     path('api/regenerate/', RegenerateImageView.as_view()), # REGENERATE IMAGE TEMPORARY as it will be automated
 
@@ -31,7 +31,7 @@ urlpatterns = [
 
 
     path('api/get-credit-balance/', GetCreditBalance.as_view(), name='api-getcreditbalance'), # Get the Credit Balance
-    path('api/get-credit-history/', GetCreditHistoryAPIView.as_view(), name='api-getcreditbalance'), # Get the Credit Balance
+    path('api/get-credit-history/', GetCreditHistoryAPIView.as_view(), name='api-getcreditbalance'), # Get the Credit History
 
     path('api/forgot-password/', ForgotPasswordView.as_view(), name='api-forgotpassword'),    # From Keywordlit Project
     path('api/reset-password/', UserChangePasswordView.as_view(), name='api-resetpassword'),  # Change password is now RESETPASSWORD

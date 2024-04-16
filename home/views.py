@@ -1056,7 +1056,7 @@ class ViewUser(APIView):
             credit_tmp={
                 "credit ID" :credit.id,
                 "User Email" :credit.user.email,
-                "Total Credits" :credit.total_credits,
+                "Total Credits Deducted" :credit.total_credits_deducted,
                 "Transaction Type" :credit.type_of_transaction,
                 "Transaction Date Time" :credit.created.strftime("%d/%m/%Y %H:%M:%S"),
                 "Payment ID" :credit.payment_id,
@@ -1649,6 +1649,19 @@ class UploadImageView(APIView):
                 image_name=image_name
             )
 
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+            # Record the credit deduction history
+            deduction_description = f"Deducted 1 credit for regenerating image '{image_name}'"
+            CreditHistory.objects.create(
+                user=user,
+                total_credits_deducted=1,
+                type_of_transaction="Credit Deduction",
+                date_time=datetime.now(pytz.utc),
+                payment_id="",  # You can leave this blank for credit deductions
+                description=deduction_description
+            )
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+
             # Regenerate and save to S3
             regen_image_url = self.regenerate_image_logic(image_instance)
 
@@ -1985,6 +1998,18 @@ class RegenerateImageView(APIView):
                     self.save_to_s3(regenerated_image, original_image, user, regenerative_at_)
                     user.credit= user.credit - 1
                     user.save()
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+                    # Record the credit deduction history
+                    deduction_description = f"Deducted 1 credit for regenerating image '{original_image.image_name}'"
+                    CreditHistory.objects.create(
+                        user=user,
+                        total_credits_deducted=1,
+                        type_of_transaction="Credit Deduction",
+                        date_time=datetime.now(pytz.utc),
+                        payment_id="",  # You can leave this blank for credit deductions
+                        description=deduction_description
+                    )
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
                 except Exception as e:
                     return JsonResponse({'Message': f'{str(e)}'}, status=400)
                 return JsonResponse({'Message': 'Regenerated image saved successfully'}, status=200)
@@ -2292,4 +2317,30 @@ class GetCreditHistoryAPIView(APIView):
         credit_history = CreditHistory.objects.all()
         serializer = CreditHistorySerializer(credit_history, many=True)
         return Response(serializer.data)
+    
+class GetCreditHistoryAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        # user_id = get_user_id_from_token(request)
+        # user, _ = IsSuperUser(user_id)
+        if not user:
+            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+        try:       
+            credit_history = CreditHistory.objects.filter(user=user)
+            serializer = CreditHistorySerializer(credit_history, many=True)
+            return Response({'Message': 'Credit History fetched successfully', "Credits":serializer.data})
+        
+        except Exception as e:
+            return Response({'Message': f'Credit History fetched Unsuccessful, {str(e)}'})
+
+        # try:
+        #     credit_balance = user.credit
+        #     return Response({'Message': 'Credit balance fetched successfully', "Credits":credit_balance})
+        # except Exception as e:
+        #     return Response({'Message':str(e)})
+
 #---------------------------------------------------Payment VIEWS------------------------------------------------------
