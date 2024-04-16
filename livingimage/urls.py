@@ -26,6 +26,13 @@ urlpatterns = [
     path('api/login/', UserLoginView.as_view(), name='api-login'),                           # From Keywordlit Project
     #path('api/refresh-token/', RefreshTokenView.as_view(), name='refresh-token'),            # From Keywordlit Project
     path('api/profile/', UserProfileView.as_view(), name='api-profile'),                     # From Keywordlit Project
+    path('api/get-profile-pic/', GetUserProfilePic.as_view(), name='api-get-profile-pic'),     
+    path('api/set-profile-pic/', SetUserProfilePic.as_view(), name='api-set-profile-pic'),     
+
+
+    path('api/get-credit-balance/', GetCreditBalance.as_view(), name='api-getcreditbalance'), # Get the Credit Balance
+    path('api/get-credit-history/', GetCreditHistoryAPIView.as_view(), name='api-getcreditbalance'), # Get the Credit Balance
+
     path('api/forgot-password/', ForgotPasswordView.as_view(), name='api-forgotpassword'),    # From Keywordlit Project
     path('api/reset-password/', UserChangePasswordView.as_view(), name='api-resetpassword'),  # Change password is now RESETPASSWORD
     path('api/change-password/', UserModifyPasswordView.as_view(), name='api-changepassword'), # NEW CHANGE PASSOWRD FOR EXISTING USERS

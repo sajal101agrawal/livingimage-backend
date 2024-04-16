@@ -9,6 +9,12 @@ class ImageForm(forms.ModelForm): # For uploading Image
   fields = ['frequency', 'prompt', 'frequency_type', 'photo', 'public']
 #   labels = {'photo':''}
   
+class ProfilePicForm(forms.ModelForm): # For uploading Image
+ class Meta:
+  model = Image
+  #fields = '__all__'
+  fields = ['photo']
+#   labels = {'photo':''}
 
 
 class CustomUserCreationForm(UserCreationForm):

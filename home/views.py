@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .forms import ImageForm
+from .forms import ImageForm, ProfilePicForm
 from .models import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -117,7 +117,7 @@ class UserEmailVerificationView(APIView):
         verification_code = request.data.get('verification_code')
         # Check if required fields are provided
         if not email or not verification_code:
-            return Response({'Message': 'Please provide the following details', 'details': {'email': 'Email', 'verification_code': 'Verification code'}}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Message': 'Please provide Email and Verification code'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = CustomUser.objects.get(email=email)
@@ -151,7 +151,7 @@ class ResendOTPView(APIView):
     def post(self, request):
         email = request.data.get('email')
         if not email:
-            return Response({'Message':  {"email": 'Please provide an email address.'}}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Message': 'Please provide an email address.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = CustomUser.objects.get(email=email)
@@ -186,16 +186,25 @@ class UserLoginView(APIView):
             user = CustomUser.objects.get(email=email)
         except CustomUser.DoesNotExist:
             # If the email is not found in records, return a 404 NotFound response
-            return Response({'Message': {'non_field_errors': ['Email not in record. Register First!']}}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'Message': 'Email not in record. Register First!'}, status=status.HTTP_404_NOT_FOUND)
 
         if user.check_password(password)  :
-            token = get_tokens_for_user(user)
             if user.is_user_verified:
+                token = get_tokens_for_user(user)
                 return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success'}, status=status.HTTP_200_OK)
             else:
-                return Response({'verified' : user.is_user_verified, 'Message':'Verify your account First!'}, status=status.HTTP_400_BAD_REQUEST)
+#--------------------------If user is not verified then OTP is sent to user-----------------------------------------------------------
+                verification_code = random.randint(100000, 999999)
+                user.verification_code = verification_code
+                user.save()
+                try:
+                    send_otp_via_email(user.email)  # Use your send_otp_via_email function
+                except ValidationError as e:
+                    return Response({'Message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+#--------------------------If user is not verified then OTP is sent to user-----------------------------------------------------------
+                return Response({'verified' : user.is_user_verified, 'Message':'Verify your account First!', 'Email': user.email}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'Message':{'non_field_errors':['Email or Password is not Valid']}}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'Message':'Email or Password is not Valid'}, status=status.HTTP_404_NOT_FOUND)
 
 class RefreshTokenView(APIView):
     """
@@ -270,6 +279,7 @@ class UserProfileView(APIView):
         
         jsonn_response = {
             'personal_data' : serializer.data,
+            'profile_pic': settings.MEDIA_URL + str(user.profile_photo),
             'Total_Image_count' : image_count,
             #'Image_data' : Image_history,
             #'deposit_history' : diposit_history
@@ -280,7 +290,74 @@ class UserProfileView(APIView):
         response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 
         return response
+    
+# ------------------------------------- USER PROFILE PICTURE --------------------------------------------------------------------
+class GetUserProfilePic(APIView):
+    """ 
+    Get a user profile data with email and password
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def post(self, request, format=None):
+        serializer = UserProfileSerializer(request.user)
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if not user:
+            return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try: 
+            photo = user.profile_photo
 
+            return Response({'Message': 'Profile Photo Fetched successfully.', 'Profile_Picture':str(photo)}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'Message': f'Profile Photo Fetching Unsuccessful, {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+class SetUserProfilePic(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    # @csrf_exempt
+    # def dispatch(self, *args, **kwargs):
+    #     return super().dispatch(*args, **kwargs)
+    
+    def post(self, request):
+        form = ProfilePicForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                # Set the user before saving the form
+                user_id = get_user_id_from_token(request)
+                user = CustomUser.objects.filter(id=user_id).first()
+                if not user:
+                    return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+                print("the user is: ",user.email)
+                # Retrieve the uploaded file from request.FILES
+                photo = request.FILES.get('photo')
+                if not photo:
+                    return JsonResponse({'Message': 'No file uploaded'}, status=400)
+                print("photo:", photo)
+                max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+                    # Check if the size of the uploaded image is less than or equal to the maximum size limit
+                if photo.size > max_size:
+                    return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+
+                user.profile_photo=photo
+
+                # form.save(commit=True)
+
+                # Calculate next regeneration datetime
+                # image_name=generate_random_string(15)
+                    
+                user.save()
+                return JsonResponse({'Message': 'Profile Pic Update Successful.'})
+            except Exception as e:
+                return JsonResponse({'Message': f'Profile Pic Update Failed, {str(e)}'}, status=400)
+
+        else:
+            print("Form is invalid")
+            print(form.errors)
+            return JsonResponse({'Message': f'Profile Pic Update Failed, {str(form.errors)}'}, status=400)
+
+# ------------------------------------- USER PROFILE PICTURE --------------------------------------------------------------------
 
 class UserModifyPasswordView(APIView):
     """ 
@@ -329,7 +406,7 @@ class UserChangePasswordView(APIView):
 
         # Check if required fields are provided
         if not email or not verification_code or not new_password:
-            return Response({'Message': 'Please provide the following details', 'details': {'email': 'Email', 'verification_code': 'Verification code', 'new_password': 'New Password'}}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Message': 'Please provide the Email, Verification code and New Password'}, status=status.HTTP_400_BAD_REQUEST)
 
          # Check if verification code is a valid number
         if not verification_code.isdigit():
@@ -367,7 +444,7 @@ class ForgotPasswordView(APIView):
     def post(self, request):
         email = request.data.get('email')
         if not email:
-            return Response({'Message': 'Please provide the following details', 'details': {'email': 'Email'}}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Message': 'Please provide the Email'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             # Check if user exists in records
             user = CustomUser.objects.get(email=email)
@@ -1403,7 +1480,7 @@ class DeleteImageAdmin(APIView):
             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
 
         if 'image_id' not in request.data or not request.data.get('image_id'):
-                    return JsonResponse({'error': 'Image ID not found'}, status=404) 
+                    return JsonResponse({'Message': 'Image ID not found'}, status=404) 
 
         image_id = request.data.get('image_id')
         print("The Image ID is: ",image_id)
@@ -1494,7 +1571,7 @@ class UploadImageView(APIView):
             # Retrieve the uploaded file from request.FILES
             photo = request.FILES.get('photo')
             if not photo:
-                return JsonResponse({'error': 'No file uploaded'}, status=400)
+                return JsonResponse({'Message': 'No file uploaded'}, status=400)
             form.instance.user = user
             print("form.instance.user :",form.instance.user)
             frequency = form.cleaned_data.get('frequency')
@@ -1517,7 +1594,7 @@ class UploadImageView(APIView):
             max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
                 # Check if the size of the uploaded image is less than or equal to the maximum size limit
             if photo.size > max_size:
-                return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+                return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
 
 
             # Calculate next regeneration datetime
@@ -1703,7 +1780,7 @@ class DeleteImageView(APIView):
             user_id = get_user_id_from_token(request)
             if user_id:
                 if 'image_id' not in request.data or not request.data.get('image_id'):
-                    return JsonResponse({'error': 'Image not found'}, status=404)
+                    return JsonResponse({'Message': 'Image not found'}, status=404)
                 
                 image_id = request.data.get("image_id")
                 user = CustomUser.objects.filter(id=user_id).first()
@@ -1779,7 +1856,7 @@ class UpdateImageView(View):
         user_id = get_user_id_from_token(request)
         if user_id:
             if not 'image_id' in request.POST or not request.POST.get('image_id'):
-                return JsonResponse({'error': 'Image not found'}, status=404)
+                return JsonResponse({'Message': 'Image not found'}, status=404)
             try:
                 user = CustomUser.objects.filter(id=user_id).first()
                 if not user:
@@ -1803,7 +1880,7 @@ class UpdateImageView(View):
                     max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
                     # Check if the size of the uploaded image is less than or equal to the maximum size limit
                     if new_image_data.size > max_size:
-                        return JsonResponse({'error': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+                        return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
                     image.photo.save(image.image_name +'.jpg', new_image_data, save=True)
                     #image.save()
                     
@@ -1882,7 +1959,7 @@ class RegenerateImageView(APIView):
         user_id = get_user_id_from_token(request)
         if user_id:
             if not 'image_id' in request.data or not request.data.get('image_id'):
-                return JsonResponse({'error': 'Image not found'}, status=404)
+                return JsonResponse({'Message': 'Image not found'}, status=404)
             image_id = request.data.get('image_id')
 
             print(image_id)
@@ -2039,16 +2116,16 @@ class DepositeMoneyAPI(APIView):
         user = CustomUser.objects.filter(id=user_id).first()
         if not user :
             msg = 'could not diposite in the user account'
-            return Response({ "transection_id":transection_id, "Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({ "transaction_id":transection_id, "Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
         
         if not 'money' in request.data and not request.data['money']:
             msg = 'could not found the money'
-            return Response({ "transection_id":transection_id, "Message": msg}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({ "transaction_id":transection_id, "Message": msg}, status=status.HTTP_400_BAD_REQUEST)
         transection_id = random.randint(100000000,99999999999)
         DepositeMoney.objects.create(user=user,Amount= request.data['money'],TransactionId = str(transection_id), method = "CREDIT_CARD", status = "COMPLETE" )
         
-        msg = 'successfully transection completed !'
-        return Response({ "transection_id":transection_id, "Message": msg}, status=status.HTTP_200_OK)
+        msg = 'successfully transaction completed !'
+        return Response({ "transaction_id":transection_id, "Message": msg}, status=status.HTTP_200_OK)
     
 class GetDipositeList(APIView):
     """ 
@@ -2095,6 +2172,25 @@ class GetDipositeList(APIView):
 
 from .models import CreditPricing
 from .serializers import CreditPricingSerializer
+
+# -------------------------------------------------View Credit Balance API ----------------------------------------------------
+class GetCreditBalance(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        # user_id = get_user_id_from_token(request)
+        # user, _ = IsSuperUser(user_id)
+        if not user:
+            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            credit_balance = user.credit
+            return Response({'Message': 'Credit balance fetched successfully', "Credits":credit_balance})
+        except Exception as e:
+            return Response({'Message':str(e)})
+# -------------------------------------------------View Credit Balance API ----------------------------------------------------
 
 class CreditPricingAPIView(APIView):
     renderer_classes = [UserRenderer]

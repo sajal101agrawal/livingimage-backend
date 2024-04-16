@@ -13,7 +13,11 @@ class CustomUserAdmin(UserAdmin):
     add_form = CustomUserCreationForm
     form = CustomUserChangeForm
     model = CustomUser
-    list_display = ["email", "username", 'is_user_verified', 'credit']
+    # list_display = ["email", "username", 'is_user_verified', 'credit']
+    list_display = ["email", "username", 'profile_photo', 'is_user_verified', 'credit']
+    def user_credit(self, obj):
+            return str(obj.user.profile_photo)
+    user_credit.short_description = 'Profile Photo'  # Customize the column header
 
 
 class HistoryAdmin(admin.ModelAdmin):
