@@ -37,6 +37,13 @@ def regenerate_image(image_id):
     from home.models import Image, RegeneratedImage, openai_account
     from home.views import calculate_regeneration_time
 
+    # img_main = Image.objects.filter(id=image_id).first()
+    # user = img_main.user
+        # if user.credit < 1:
+        #     msg = 'Insufficient credit to perform this action.'
+        #     return Response({"Message": msg}, status=status.HTTP_402_PAYMENT_REQUIRED)
+
+
     # LOGIC FUNCTION
     # def preprocess_image(image_path, target_size=(1024, 1024)):
     #     from PIL import Image

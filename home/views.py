@@ -1567,6 +1567,11 @@ class UploadImageView(APIView):
             user = CustomUser.objects.filter(id=user_id).first()
             if not user:
                 return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # if user.credit < 1:
+            #     msg = 'Insufficient credit to perform this action.'
+            #     return Response({"Message": msg}, status=status.HTTP_402_PAYMENT_REQUIRED)
+
             print("the user is: ",user.email)
             # Retrieve the uploaded file from request.FILES
             photo = request.FILES.get('photo')
@@ -1957,6 +1962,10 @@ class RegenerateImageView(APIView):
         # Retrieve image ID from the request data
         # Get user ID from the request (assuming you have authentication implemented)
         user_id = get_user_id_from_token(request)
+        # user = CustomUser.objects.filter(id=user_id).first()
+        # if user.credit < 1:
+        #     msg = 'Insufficient credit to perform this action.'
+        #     return Response({"Message": msg}, status=status.HTTP_402_PAYMENT_REQUIRED)
         if user_id:
             if not 'image_id' in request.data or not request.data.get('image_id'):
                 return JsonResponse({'Message': 'Image not found'}, status=404)
