@@ -299,102 +299,112 @@ class GetUserProfilePic(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     def post(self, request, format=None):
-        serializer = UserProfileSerializer(request.user)
         user_id = get_user_id_from_token(request)
         user = CustomUser.objects.filter(id=user_id).first()
         if not user:
             return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
         
         try: 
-            photo = user.profile_photo
-
-            return Response({'Message': 'Profile Photo Fetched successfully.', 'Profile_Picture': 'http://127.0.0.1:8000/media/'+ str(user.profile_photo) }, status=status.HTTP_200_OK)
+            if user.profile_photo:
+                photo = user.profile_photo
+                return Response({'Message': 'Profile Photo Fetched successfully.', 'Profile_Picture': str(photo) }, status=status.HTTP_200_OK)
+            else:
+                return Response({'Message': 'User has no profile picture.', 'Profile_Picture': None}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Message': f'Profile Photo Fetching Unsuccessful, {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-
+ 
 class SetUserProfilePic(APIView):
+    renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
             # Retrieve the authenticated user
             user = request.user
-            
+             
             # Retrieve the uploaded file from request.FILES
             profile_photo = request.FILES.get('photo')
             
             if not profile_photo:
-                return JsonResponse({'Message': 'No file uploaded'}, status=400)
+                return Response({'Message': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
             
             # Check if the size of the uploaded image is within the limit
             max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
             if profile_photo.size > max_size:
-                return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+                return Response({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Save the profile photo to the user's profile_photo field
-            user.profile_photo = profile_photo
-            user.save()
+            # Initialize S3 client
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=settings.AWS_S3_REGION_NAME
+            )
 
-            # Construct the local file path to save the uploaded photo
-            media_root = settings.MEDIA_ROOT  # Get the MEDIA_ROOT from settings
-            profile_pic_dir = os.path.join(media_root, 'profile_pic')  # Join MEDIA_ROOT with 'profile_pic'
-            file_path = os.path.join(profile_pic_dir, profile_photo.name)  # Join with the uploaded file name
+            # Check if the user already has a profile picture stored in S3
+            if user.profile_photo and str(user.profile_photo).startswith('https://'):
+                # Extract the S3 bucket name and key from the existing profile photo URL
+                bucket_name, key = self.extract_bucket_and_key(str(user.profile_photo))
 
-            # Create directories if they don't exist
-            os.makedirs(profile_pic_dir, exist_ok=True)
+                # Upload the file to the existing S3 bucket
+                # s3_client.upload_fileobj(profile_photo, bucket_name, key)
+                
+                # Upload the file to the existing S3 bucket with inline Content-Disposition
+                s3_client.put_object(
+                    Bucket=bucket_name,
+                    Key=key,
+                    Body=profile_photo,
+                    ContentType=profile_photo.content_type,
+                    ContentDisposition='inline'  # Set Content-Disposition to inline
+                )
 
-            # Save the file to the local filesystem
-            with open(file_path, 'wb') as f:
-                for chunk in profile_photo.chunks():
-                    f.write(chunk)
 
-            return JsonResponse({'Message': 'Profile Pic Update Successful.'})
+                # Construct the S3 URL for the uploaded photo
+                s3_url = f"https://{bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{key}"
+
+                # Update the user's profile_photo field with the new S3 URL
+                user.profile_photo = s3_url
+                user.save()
+
+                return Response({'Message': 'Profile Pic Update Successful.', 'S3_URL': s3_url}, status=status.HTTP_200_OK)
+            else:
+                # Upload the file to a new S3 bucket (Assuming you want to use a different bucket for new uploads)
+                bucket_name = settings.AWS_STORAGE_BUCKET_NAME3
+                key = f"profile_pic/{user.id}/{profile_photo.name}"
+
+                # Upload the file to the new S3 bucket
+                # s3_client.upload_fileobj(profile_photo, bucket_name, key)
+
+                # Upload the file to the new S3 bucket with inline Content-Disposition
+                s3_client.put_object(
+                    Bucket=bucket_name,
+                    Key=key,
+                    Body=profile_photo,
+                    ContentType=profile_photo.content_type,
+                    ContentDisposition='inline'  # Set Content-Disposition to inline
+                )
+
+                # Construct the S3 URL for the uploaded photo
+                s3_url = f"https://{bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{key}"
+
+                # Update the user's profile_photo field with the new S3 URL
+                user.profile_photo = s3_url
+                user.save()
+
+                return Response({'Message': 'Profile Pic Update Successful.', 'S3_URL': s3_url}, status=status.HTTP_200_OK)
+
         except Exception as e:
-            return JsonResponse({'Message': f'Profile Pic Update Failed, {str(e)}'}, status=400)
+            return Response({'Message': f'Profile Pic Update Failed: {e}'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def extract_bucket_and_key(self, s3_url):
+        """Extracts S3 bucket name and key from the S3 URL."""
+        # Example S3 URL: "https://bucket-name.s3.region.amazonaws.com/key"
+        parts = s3_url.split('/')
+        bucket_name = parts[2].split('.')[0]
+        key = '/'.join(parts[3:])
+        return bucket_name, key
 
 
-# class SetUserProfilePic(APIView):
-#     from django.utils.decorators import method_decorator
-#     from django.views.decorators.csrf import csrf_exempt
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-#     @method_decorator(csrf_exempt)
-#     def dispatch(self, *args, **kwargs):
-#         return super().dispatch(*args, **kwargs)
-
-#     def post(self, request):
-#         # form = ProfilePicForm(request.POST, request.FILES)
-#         # if form.is_valid():
-#         try:
-#             # Retrieve the authenticated user
-#             user_id = get_user_id_from_token(request)
-#             user = CustomUser.objects.filter(id=user_id).first()
-#             if not user:
-#                 return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
-            
-#             # Retrieve the uploaded file from form.cleaned_data
-#             profile_photo = request.FILES.get('photo')#form.cleaned_data['profile_photo']
-#             print("I AM TILL HERE DONE 11111111")
-#             if not profile_photo or not 'photo' in request.FILES:
-#                 return JsonResponse({'Message': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
-            
-#             # Check if the size of the uploaded image is within the limit
-#             max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
-#             if profile_photo.size > max_size:
-#                 return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=status.HTTP_400_BAD_REQUEST)
-
-#             print("I AM TILL HERE DONE")
-
-#             # Save the profile photo to the user's profile_photo field
-#             user.profile_photo = profile_photo
-#             user.save()
-
-#             return JsonResponse({'Message': 'Profile Pic Update Successful.'})
-#         except Exception as e:
-#             return JsonResponse({'Message': f'Profile Pic Update Failed, {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-        # else:
-        #     # Form is invalid, return error details
-        #     return JsonResponse({'Message': f'Profile Pic Update Failed, Invalid form data: {form.errors}'}, status=status.HTTP_400_BAD_REQUEST)
 
 # ------------------------------------- USER PROFILE PICTURE --------------------------------------------------------------------
 

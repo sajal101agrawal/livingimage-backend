@@ -205,6 +205,7 @@ AWS_SECRET_ACCESS_KEY = config['AWS']['AWS_SECRET_ACCESS_KEY']
 
 AWS_STORAGE_BUCKET_NAME = 'livingimage-original-images'
 AWS_STORAGE_BUCKET_NAME2 = 'livingimage-regenerated-images'
+AWS_STORAGE_BUCKET_NAME3 = 'livingimage-profile-bucket'
 AWS_S3_SIGNATURE_VERSION = 's3v4'
 #AWS_S3_SIGNATURE_NAME = 's3v4',
 AWS_S3_REGION_NAME = 'us-east-1'
