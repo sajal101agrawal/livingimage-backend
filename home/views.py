@@ -1830,7 +1830,7 @@ class UploadImageView(APIView):
 
 #--------------------------------------------Regenerating Image Logic ---------------------------------------------------------
 
-
+     
 
 
 from django.contrib.auth.decorators import login_required
