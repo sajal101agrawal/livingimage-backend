@@ -170,6 +170,8 @@ def regenerate_image(image_id):
         user.credit= user.credit - 1
         user.save()
 
+        credit_balance_left = user.credit
+
 # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
         # Record the credit deduction history
         deduction_description = f"Deducted 1 credit for regenerating image '{original_image.image_name}'"
@@ -179,7 +181,8 @@ def regenerate_image(image_id):
             type_of_transaction="Credit Deduction",
             date_time=datetime.now(pytz.utc),
             payment_id="",  # You can leave this blank for credit deductions
-            description=deduction_description
+            description=deduction_description,
+            credit_balance_left=credit_balance_left
         )
 # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
         return {'Message': f'Regenerated image {image_id} successfully'}

@@ -220,6 +220,7 @@ class CreditHistory(TimeStampModel):
     date_time = models.DateTimeField()
     payment_id = models.CharField(max_length=100)
     description = models.TextField()
+    credit_balance_left = models.IntegerField()
 
 #---------------------------------------------------Payment Models-------------------------------------------------------------
 

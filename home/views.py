@@ -1704,18 +1704,18 @@ class UploadImageView(APIView):
                 image_name=image_name
             )
 
-# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
-            # Record the credit deduction history
-            deduction_description = f"Deducted 1 credit for regenerating image '{image_name}'"
-            CreditHistory.objects.create(
-                user=user,
-                total_credits_deducted=1,
-                type_of_transaction="Credit Deduction",
-                date_time=datetime.now(pytz.utc),
-                payment_id="",  # You can leave this blank for credit deductions
-                description=deduction_description
-            )
-# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+# # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+#             # Record the credit deduction history
+#             deduction_description = f"Deducted 1 credit for regenerating image '{image_name}'"
+#             CreditHistory.objects.create(
+#                 user=user,
+#                 total_credits_deducted=1,
+#                 type_of_transaction="Credit Deduction",
+#                 date_time=datetime.now(pytz.utc),
+#                 payment_id="",  # You can leave this blank for credit deductions
+#                 description=deduction_description
+#             )
+# # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
 
             # Regenerate and save to S3
             regen_image_url = self.regenerate_image_logic(image_instance)
@@ -1728,6 +1728,21 @@ class UploadImageView(APIView):
             # Deduct User Credit
             user.credit= user.credit - 1
             user.save()
+
+            credit_balance_left = user.credit
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+            # Record the credit deduction history
+            deduction_description = f"Deducted 1 credit for regenerating image '{image_name}'"
+            CreditHistory.objects.create(
+                user=user,
+                total_credits_deducted=1,
+                type_of_transaction="Credit Deduction",
+                date_time=datetime.now(pytz.utc),
+                payment_id="",  # You can leave this blank for credit deductions
+                description=deduction_description,
+                credit_balance_left=credit_balance_left
+            )
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
             #form.save()
             #return redirect('/api/dashboard/')
             return JsonResponse({'Message': 'Image Upload successful.'})
@@ -2053,6 +2068,9 @@ class RegenerateImageView(APIView):
                     self.save_to_s3(regenerated_image, original_image, user, regenerative_at_)
                     user.credit= user.credit - 1
                     user.save()
+
+                    credit_balance_left = user.credit
+
 # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
                     # Record the credit deduction history
                     deduction_description = f"Deducted 1 credit for regenerating image '{original_image.image_name}'"
@@ -2062,7 +2080,8 @@ class RegenerateImageView(APIView):
                         type_of_transaction="Credit Deduction",
                         date_time=datetime.now(pytz.utc),
                         payment_id="",  # You can leave this blank for credit deductions
-                        description=deduction_description
+                        description=deduction_description,
+                        credit_balance_left=credit_balance_left
                     )
 # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
                 except Exception as e:
