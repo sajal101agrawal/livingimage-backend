@@ -520,6 +520,7 @@ class ForgotPasswordView(APIView):
     
 # ------------------------------------Regenrative Time Calculate -----------------------------------------------------------------
 def calculate_regeneration_time(frequency,frequency_type):
+        frequency=int(frequency)
         # Calculate the next regenerative_at datetime based on frequency and frequency_type
         now_utc = datetime.now(pytz.utc)
         if frequency_type == 'day':
@@ -892,8 +893,8 @@ class GetOneOriginalImage(APIView):
                 'original_image': str(allOriginalImage.photo),
                 'public' : allOriginalImage.public,
                 'prompt' : allOriginalImage.prompt,
-                # 'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
-                # 'frequency' : allOriginalImage.frequency,#json.loads(history.result.replace("'", "\"")),
+                'frequency_type' : allOriginalImage.frequency_type,#created.strftime("%d/%m/%Y"),
+                'frequency' : allOriginalImage.frequency,#json.loads(history.result.replace("'", "\"")),
                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
                 'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
                 'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
@@ -1646,8 +1647,8 @@ class UploadImageView(APIView):
             print("photo:", photo)
             print("public:", public)
 
-            print("Secret Key",settings.AWS_SECRET_ACCESS_KEY)
-            print("Access Key",settings.AWS_ACCESS_KEY_ID)
+            # print("Secret Key",settings.AWS_SECRET_ACCESS_KEY)
+            # print("Access Key",settings.AWS_ACCESS_KEY_ID)
 
 
             max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
