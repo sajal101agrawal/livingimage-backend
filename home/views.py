@@ -277,9 +277,14 @@ class UserProfileView(APIView):
             }
             diposit_history.append(tmp)
         
+        if user.profile_photo:
+            photo = user.profile_photo
+        else:
+            photo = None
+                
         jsonn_response = {
             'personal_data' : serializer.data,
-            'profile_pic': settings.MEDIA_URL + str(user.profile_photo),
+            'profile_pic': photo,
             'Total_Image_count' : image_count,
             #'Image_data' : Image_history,
             #'deposit_history' : diposit_history
@@ -1830,7 +1835,7 @@ class UploadImageView(APIView):
 
 #--------------------------------------------Regenerating Image Logic ---------------------------------------------------------
 
-     
+
 
 
 from django.contrib.auth.decorators import login_required
