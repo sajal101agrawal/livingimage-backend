@@ -191,10 +191,6 @@ LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
 
 
-
-STRIPE_PUBLIC_KEY = 'pk_test_51OmR7LFgeSLbzlIVe6lKlJwhv4nI5maN5gXJLqxbXmW8QCjLUGtAEqRPxccgEODRdhl8T83Df432Wn4j7kQrImCj00foTgjwyA'
-STRIPE_SECRET_KEY = 'sk_test_51OmR7LFgeSLbzlIV4PWYM8azw8RoCk86r1YrmaQYGJsueGVkvY8jHcQsxZgNiOvrAzLJREhwm6lJm7R8fLuwfwte00gRgjL3Nb'
-
 import configparser
 
 config = configparser.ConfigParser()
@@ -202,6 +198,10 @@ config.read('config.ini')
 
 AWS_ACCESS_KEY_ID = config['AWS']['AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = config['AWS']['AWS_SECRET_ACCESS_KEY']
+
+STRIPE_PUBLIC_KEY = config['AWS']['STRIPE_PUBLIC_KEY']
+STRIPE_SECRET_KEY = config['AWS']['STRIPE_SECRET_KEY']
+
 
 AWS_STORAGE_BUCKET_NAME = 'livingimage-original-images'
 AWS_STORAGE_BUCKET_NAME2 = 'livingimage-regenerated-images'
