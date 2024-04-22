@@ -1595,6 +1595,162 @@ class DeleteImageAdmin(APIView):
 
 # -----------------------------------------------ADMIN Delete Original Image ---------------------------------------------------------------
 
+# -----------------------------------------------ADMIN Add Credit To user ---------------------------------------------------------------
+
+class AdminAddCredit(APIView):
+    """ 
+    Update-user-Credit if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user_found = False
+        if 'user_id' not in request.data or not request.data.get('user_id'):
+            msg = 'could not found the user_id'
+            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not 'credit_amount' in request.data or not request.data['credit_amount']:
+            msg = 'could not found the credit_amount to add credit to user'
+            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+            
+        found_user = CustomUser.objects.filter(is_superuser=False,id=request.data['user_id']).first()
+        if not found_user :
+            return Response({'Message' : 'could not got the user'}, status=status.HTTP_204_NO_CONTENT)
+
+        # found_user = found_user
+        try:
+            credits_amount = int(request.data['credit_amount'])
+        except:
+            return Response({'Message' : 'credit amount given is not proper'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        try:
+            if credits_amount <= 0:
+                return Response({'Message' : 'Credit amount must be a positive number'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ValueError as e:
+            error_message = str(e)
+            return Response({'Message': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            credit_balance_before_update = found_user.credit
+            email_user=found_user.email
+            found_user.credit=found_user.credit + credits_amount
+            found_user.save()
+            msg = 'Successfully add credits to the user'
+            status_code = status.HTTP_200_OK
+
+            credit_balance_left = found_user.credit
+
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+            
+            deduction_description = f"Added '{credits_amount}' credit to the user '{email_user}'"
+            CreditHistory.objects.create(
+                user=found_user,
+                total_credits_deducted=credits_amount,
+                type_of_transaction="Credit Addition",
+                date_time=datetime.now(pytz.utc),
+                payment_id="admin",  # You can leave this blank for credit deductions
+                description=deduction_description,
+                credit_balance_left=credit_balance_left
+            )
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+            return Response({'Message' : msg, 'email': email_user, 'credit_balance_before_update':credit_balance_before_update, 'updated_credit_balance':credit_balance_left}, status=status_code)
+            
+        except Exception as e:
+            msg = f'Error Occured while adding credit to user: {str(e)}'
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            return Response({'Message' : msg, 'email': email_user}, status=status_code)
+
+# -----------------------------------------------ADMIN Add Credit To user ---------------------------------------------------------------
+
+
+
+# -----------------------------------------------ADMIN Deduct Credit from user ---------------------------------------------------------------
+
+class AdminDeductCredit(APIView):
+    """ 
+    Update-user-Credit if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user_found = False
+        if 'user_id' not in request.data or not request.data.get('user_id'):
+            msg = 'could not found the user_id'
+            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not 'credit_amount' in request.data or not request.data['credit_amount']:
+            msg = 'could not found the credit_amount to add credit to user'
+            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+            
+        found_user = CustomUser.objects.filter(is_superuser=False,id=request.data['user_id']).first()
+        if not found_user :
+            return Response({'Message' : 'could not got the user'}, status=status.HTTP_204_NO_CONTENT)
+
+        # found_user = found_user
+        try:
+            credits_amount = int(request.data['credit_amount'])
+        except:
+            return Response({'Message' : 'credit amount given is not proper'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        try:
+            if credits_amount <= 0:
+                return Response({'Message' : 'Credit amount must be a positive number'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ValueError as e:
+            error_message = str(e)
+            return Response({'Message': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            credit_balance_before_update = found_user.credit
+            email_user=found_user.email
+            if credits_amount > found_user.credit:
+                found_user.credit = 0
+            else:
+                found_user.credit=found_user.credit - credits_amount
+            found_user.save()
+            msg = 'Successfully deducted credits to the user'
+            status_code = status.HTTP_200_OK
+
+            credit_balance_left = found_user.credit
+
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+            
+            deduction_description = f"Deducted '{credits_amount}' credit from the user '{email_user}'"
+            CreditHistory.objects.create(
+                user=found_user,
+                total_credits_deducted=credits_amount,
+                type_of_transaction="Credit Deduction",
+                date_time=datetime.now(pytz.utc),
+                payment_id="admin",  # You can leave this blank for credit deductions
+                description=deduction_description,
+                credit_balance_left=credit_balance_left
+            )
+# --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+            return Response({'Message' : msg, 'email': email_user, 'credit_balance_before_update':credit_balance_before_update, 'updated_credit_balance':credit_balance_left}, status=status_code)
+            
+        except Exception as e:
+            msg = f'Error Occured while deducting credit to user: {str(e)}'
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            return Response({'Message' : msg, 'email': email_user}, status=status_code)
+
+# -----------------------------------------------ADMIN Deduct Credit from user ---------------------------------------------------------------
+
+
+
+
 
 # -----------------------------------------------ADMIN API's ---------------------------------------------------------------
 

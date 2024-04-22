@@ -57,6 +57,8 @@ urlpatterns = [
     path('api/admin/get-one-original-admin/', AdminGetOneOriginalImage.as_view(), name='AdminGetOneOriginalImage'),  # Admin
     path('api/admin/analytics/', AdminAnalytics.as_view(), name='AdminAnalytics'),  # Admin
     path('api/admin/delete-image/', DeleteImageAdmin.as_view(), name='DeleteImageAdmin'),  # Admin
+    path('api/admin/add-credit/', AdminAddCredit.as_view(), name='AdminAddCredit'),  # Add Credit Admin
+    path('api/admin/deduct-credit/', AdminDeductCredit.as_view(), name='AdminDeductCredit'),  # Add Credit Admin
 
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
