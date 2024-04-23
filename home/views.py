@@ -1862,32 +1862,32 @@ class UploadImageView(APIView):
 
 # # --------------------------CODE For Regenrative Logic------------------------------------------------------------------
 
-            # # Regenerate and save to S3
-            # regen_image_url = self.regenerate_image_logic(image_instance)
+            # Regenerate and save to S3
+            regen_image_url = self.regenerate_image_logic(image_instance)
 
-            # # Calculate the regenerative_at datetime based on frequency and frequency_type
-            # regenerative_at_ = calculate_regeneration_time(image_instance.frequency,image_instance.frequency_type)
+            # Calculate the regenerative_at datetime based on frequency and frequency_type
+            regenerative_at_ = calculate_regeneration_time(image_instance.frequency,image_instance.frequency_type)
 
-            # self.save_to_s3(regen_image_url, image_instance, user, regenerative_at_)
+            self.save_to_s3(regen_image_url, image_instance, user, regenerative_at_)
 
-            # # Deduct User Credit
-            # user.credit= user.credit - 1
-            # user.save()
+            # Deduct User Credit
+            user.credit= user.credit - 1
+            user.save()
 # # --------------------------CODE For Regenrative Logic------------------------------------------------------------------
 
-            # credit_balance_left = user.credit
+            credit_balance_left = user.credit
 # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
-            # # Record the credit deduction history
-            # deduction_description = f"Deducted 1 credit for regenerating image '{image_name}'"
-            # CreditHistory.objects.create(
-            #     user=user,
-            #     total_credits_deducted=1,
-            #     type_of_transaction="Credit Deduction",
-            #     date_time=datetime.now(pytz.utc),
-            #     payment_id="",  # You can leave this blank for credit deductions
-            #     description=deduction_description,
-            #     credit_balance_left=credit_balance_left
-            # )
+            # Record the credit deduction history
+            deduction_description = f"Deducted 1 credit for regenerating image '{image_name}'"
+            CreditHistory.objects.create(
+                user=user,
+                total_credits_deducted=1,
+                type_of_transaction="Credit Deduction",
+                date_time=datetime.now(pytz.utc),
+                payment_id="",  # You can leave this blank for credit deductions
+                description=deduction_description,
+                credit_balance_left=credit_balance_left
+            )
 # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
             #form.save()
             #return redirect('/api/dashboard/')
