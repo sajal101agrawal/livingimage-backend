@@ -202,7 +202,7 @@ class UserLoginView(APIView):
                 except ValidationError as e:
                     return Response({'Message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 #--------------------------If user is not verified then OTP is sent to user-----------------------------------------------------------
-                return Response({'verified' : user.is_user_verified, 'Message':'Verify your account First!', 'Email': user.email}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'verified' : user.is_user_verified, 'Message':'Verify your account First!', 'Email': user.email}, status=status.HTTP_200_OK)
         else:
             return Response({'Message':'Email or Password is not Valid'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -797,6 +797,9 @@ class GetAllOriginalImage(APIView):
                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
                 'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
                 'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
+                'user_image_name':allOriginalImage.user_image_name,
+                'tag':allOriginalImage.tag,
+                'description':allOriginalImage.description
             }
             Original_Image_history.append(tmp)
 
@@ -898,6 +901,9 @@ class GetOneOriginalImage(APIView):
                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
                 'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
                 'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
+                'user_image_name':allOriginalImage.user_image_name,
+                'tag':allOriginalImage.tag,
+                'description':allOriginalImage.description
             }
 
             jsonn_response = {
@@ -1320,6 +1326,9 @@ class AdminGetAllOriginalImage(APIView):
                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
                 'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
                 'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
+                'user_image_name':allOriginalImage.user_image_name,
+                'tag':allOriginalImage.tag,
+                'description':allOriginalImage.description
             }
             Original_count+=1
             Original_Image_history.append(tmp)
@@ -1432,6 +1441,9 @@ class AdminGetOneOriginalImage(APIView):
                 'created': allOriginalImage.created.strftime("%d/%m/%Y %H:%M:%S"),
                 'regenerated_at': allOriginalImage.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if allOriginalImage.regenerated_at else None,
                 'next_regeneration_at': allOriginalImage.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
+                'user_image_name':allOriginalImage.user_image_name,
+                'tag':allOriginalImage.tag,
+                'description':allOriginalImage.description
             }
 
             jsonn_response = {
@@ -2146,6 +2158,15 @@ class UpdateImageView(View):
                     image.frequency_type = request.POST['frequency_type']
                 if 'public' in request.POST:
                     image.public = request.POST['public']
+                
+                if 'tag' in request.POST:
+                    image.tag = request.POST['tag']
+                
+                if 'description' in request.POST:
+                    image.description = request.POST['description']
+                
+                if 'user_image_name' in request.POST:
+                    image.user_image_name = request.POST['user_image_name']
 
                 # Check if a new image file is provided
                 new_image_data = request.FILES.get('photo')
