@@ -1528,69 +1528,92 @@ class DeleteImageAdmin(APIView):
         return super().dispatch(*args, **kwargs)
 
     def post(self, request):
-        user_id = get_user_id_from_token(request)
-        user, is_superuser = IsSuperUser(user_id)
-        if not user or not is_superuser:
-            msg = 'could not found the super user'
-            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
-
-        if 'image_id' not in request.data or not request.data.get('image_id'):
-                    return JsonResponse({'Message': 'Image ID not found'}, status=404) 
-
-        image_id = request.data.get('image_id')
-        print("The Image ID is: ",image_id)
         try:
-            image = Image.objects.get(id=image_id)
-            image_name=image.image_name
-            # Delete the image file from the S3 bucket
-            #s3_key = str(image.photo)
-            s3_key = str(image.image_name)+".jpg"
-            orig_imge_id=image.id
-            print('The original Image S3 Key is: ',s3_key)
+            user_id = get_user_id_from_token(request)
+            user, is_superuser = IsSuperUser(user_id)
+            if not user or not is_superuser:
+                msg = 'could not found the super user'
+                return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
 
+            if 'image_id' not in request.data or not request.data.get('image_id'):
+                return JsonResponse({'Message': 'Image ID not found'}, status=404) 
             
-# ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
-            # Fetch and delete the corresponding regenerated image from the S3 bucket
-            regenerated_image = RegeneratedImage.objects.filter(original_image_id=orig_imge_id)
-            if regenerated_image:
-                regenerated_s3_key = str(regenerated_image[0].original_image_name)+'.png'
-                print("The regenerated Image S3 Key is :",regenerated_s3_key)
-                # Delete from the regenerated image bucket
-                regenerated_bucket = settings.AWS_STORAGE_BUCKET_NAME2
-                #regenerated_storage = get_storage_class()(bucket=regenerated_bucket)
-                regenerated_storage = get_storage_class("storages.backends.s3boto3.S3Boto3Storage")()
-                regenerated_storage.bucket_name = regenerated_bucket
-                regenerated_storage.delete(regenerated_s3_key)
-                print(" THE REGENERATED IMAGE HAS BEEN DELETD",str(regenerated_image[0].original_image_name))
+            error_messages = []
 
-# ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
+            image_ids = request.data.get('image_id',[])
+            print("The Image IDs are: ",image_ids)
+            for image_id in image_ids:
+                try:
+                    image = Image.objects.get(id=image_id)
+                    image_name=image.image_name
+                    user_of_image = image.user
+                    # Delete the image file from the S3 bucket
+                    #s3_key = str(image.photo)
+                    s3_key = str(image.image_name)+".jpg"
+                    orig_imge_id=image.id
+                    print('The original Image S3 Key is: ',s3_key)
+
+                    
+        # ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
+                    # Fetch and delete the corresponding regenerated image from the S3 bucket
+                    regenerated_image = RegeneratedImage.objects.filter(original_image_id=orig_imge_id)
+                    if regenerated_image:
+                        regenerated_s3_key = str(regenerated_image[0].original_image_name)+'.png'
+                        print("The regenerated Image S3 Key is :",regenerated_s3_key)
+                        # Delete from the regenerated image bucket
+                        regenerated_bucket = settings.AWS_STORAGE_BUCKET_NAME2
+                        #regenerated_storage = get_storage_class()(bucket=regenerated_bucket)
+                        regenerated_storage = get_storage_class("storages.backends.s3boto3.S3Boto3Storage")()
+                        regenerated_storage.bucket_name = regenerated_bucket
+                        regenerated_storage.delete(regenerated_s3_key)
+                        print(" THE REGENERATED IMAGE HAS BEEN DELETD",str(regenerated_image[0].original_image_name))
+
+        # ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
 
 
-            default_storage.delete(s3_key)
+                    default_storage.delete(s3_key)
 
-            History.objects.create(
-                tag='admin-delete',
-                user=user,
-                image_data=image.photo,
-                prompt=image.prompt,
-                frequency_type=image.frequency_type,
-                frequency=image.frequency,
-                public=image.public,
-                image_name=image_name
-            )
+                    History.objects.create(
+                        tag='admin-delete',
+                        user=user_of_image,
+                        image_data=image.photo,
+                        prompt=image.prompt,
+                        frequency_type=image.frequency_type,
+                        frequency=image.frequency,
+                        public=image.public,
+                        image_name=image_name
+                    )
 
-            # s3_key = image.image_name +'.png'  Regenerated Image
+                    # s3_key = image.image_name +'.png'  Regenerated Image
 
 
 
-            image.delete()
+                    image.delete()
+                except ObjectDoesNotExist:
+                    error_messages.append(f'Image with ID {image_id} not found or have some error.')
+                    print(f'Image with ID {image_id} not found or have some error.')
+                except ClientError as e:
+                    error_messages.append(f'Error deleting image with ID {image_id}: {str(e)}')
+                    print(f'Error deleting image with ID {image_id}: {str(e)}')
+                except Exception as e:
+                    error_messages.append(f'An error occurred with image ID {image_id}: {str(e)}')
+                    print(f'An error occurred with image ID {image_id}: {str(e)}')
+            
+            if len(error_messages)==0:
 
-            return JsonResponse({'Message': 'Image deleted successfully.'})
+                return JsonResponse({'Message': 'Image deleted successfully.'})
+            else:
+                return JsonResponse({'Message': 'Some images deleted successfully, But some selected image id are wrong'})
+                
+
+            # return JsonResponse({'Message': 'Image deleted successfully.'})
             # else:
             #     return JsonResponse({'Message': 'Image not found.'}, status=404)
         except Image.DoesNotExist:
             return JsonResponse({'Message': 'Image not found.'}, status=404)
         except ClientError as e:
+            return JsonResponse({'Message': f'An error occurred: {str(e)}'}, status=500)
+        except Exception as e:
             return JsonResponse({'Message': f'An error occurred: {str(e)}'}, status=500)
 
 # -----------------------------------------------ADMIN Delete Original Image ---------------------------------------------------------------
@@ -2016,53 +2039,70 @@ class DeleteImageView(APIView):
                 if 'image_id' not in request.data or not request.data.get('image_id'):
                     return JsonResponse({'Message': 'Image not found'}, status=404)
                 
-                image_id = request.data.get("image_id")
-                user = CustomUser.objects.filter(id=user_id).first()
-                image = Image.objects.get(id=image_id, user=user)
-                image_name = image.image_name
-                #s3_key = str(image.photo)
-                s3_key = str(image.image_name)+".jpg"
-                orig_imge_id=image.id
-                print('The original Image S3 Key is: ',s3_key)
+                error_messages = []
 
+                image_id = request.data.get("image_id", [])
+
+                # image_id = request.data.get("image_id")
+                for images in image_id:
+                    try:
+                        user = CustomUser.objects.filter(id=user_id).first()
+                        image = Image.objects.get(id=images, user=user)
+                        image_name = image.image_name
+                        #s3_key = str(image.photo)
+                        s3_key = str(image.image_name)+".jpg"
+                        orig_imge_id=image.id
+                        print('The original Image S3 Key is: ',s3_key)
+
+                        
+        # ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
+                        # Fetch and delete the corresponding regenerated image from the S3 bucket
+                        regenerated_image = RegeneratedImage.objects.filter(original_image_id=orig_imge_id)
+                        if regenerated_image:
+                            regenerated_s3_key = str(regenerated_image[0].original_image_name)+'.png'
+                            print("The regenerated Image S3 Key is :",regenerated_s3_key)
+                            # Delete from the regenerated image bucket
+                            regenerated_bucket = settings.AWS_STORAGE_BUCKET_NAME2
+                            #regenerated_storage = get_storage_class()(bucket=regenerated_bucket)
+                            regenerated_storage = get_storage_class("storages.backends.s3boto3.S3Boto3Storage")()
+                            regenerated_storage.bucket_name = regenerated_bucket
+                            regenerated_storage.delete(regenerated_s3_key)
+                            print(" THE REGENERATED IMAGE HAS BEEN DELETD",str(regenerated_image[0].original_image_name))
+
+        # ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
+
+
+                        default_storage.delete(s3_key)
+
+                        History.objects.create(
+                            tag='delete',
+                            user=user,
+                            image_data=image.photo,
+                            prompt=image.prompt,
+                            frequency_type=image.frequency_type,
+                            frequency=image.frequency,
+                            public=image.public,
+                            image_name=image_name
+                        )
+
+                        # s3_key = image.image_name +'.png'  Regenerated Image
+
+                        image.delete()
+                    except ObjectDoesNotExist:
+                        error_messages.append(f'Image with ID {images} not found or have some error.')
+                        print(f'Image with ID {images} not found or have some error.')
+                    except ClientError as e:
+                        error_messages.append(f'Error deleting image with ID {images}: {str(e)}')
+                        print(f'Error deleting image with ID {images}: {str(e)}')
+                    except Exception as e:
+                        error_messages.append(f'An error occurred with image ID {images}: {str(e)}')
+                        print(f'An error occurred with image ID {images}: {str(e)}')
                 
-# ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
-                # Fetch and delete the corresponding regenerated image from the S3 bucket
-                regenerated_image = RegeneratedImage.objects.filter(original_image_id=orig_imge_id)
-                if regenerated_image:
-                    regenerated_s3_key = str(regenerated_image[0].original_image_name)+'.png'
-                    print("The regenerated Image S3 Key is :",regenerated_s3_key)
-                    # Delete from the regenerated image bucket
-                    regenerated_bucket = settings.AWS_STORAGE_BUCKET_NAME2
-                    #regenerated_storage = get_storage_class()(bucket=regenerated_bucket)
-                    regenerated_storage = get_storage_class("storages.backends.s3boto3.S3Boto3Storage")()
-                    regenerated_storage.bucket_name = regenerated_bucket
-                    regenerated_storage.delete(regenerated_s3_key)
-                    print(" THE REGENERATED IMAGE HAS BEEN DELETD",str(regenerated_image[0].original_image_name))
+                if len(error_messages)==0:
 
-# ----------------------------------------Delete Regenerated Image From S3 Upon Deleteion of Original Image----------------------------------
-
-
-                default_storage.delete(s3_key)
-
-                History.objects.create(
-                    tag='delete',
-                    user=user,
-                    image_data=image.photo,
-                    prompt=image.prompt,
-                    frequency_type=image.frequency_type,
-                    frequency=image.frequency,
-                    public=image.public,
-                    image_name=image_name
-                )
-
-                # s3_key = image.image_name +'.png'  Regenerated Image
-
-
-
-                image.delete()
-
-                return JsonResponse({'Message': 'Image deleted successfully.'})
+                    return JsonResponse({'Message': 'Image deleted successfully.'})
+                else:
+                    return JsonResponse({'Message': 'Some images deleted successfully, But some selected image id are wrong'})
                 # else:
                 #     return JsonResponse({'Message': 'Image file not found in S3.'}, status=404)
             else:
