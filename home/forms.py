@@ -6,7 +6,12 @@ class ImageForm(forms.ModelForm): # For uploading Image
  class Meta:
   model = Image
   #fields = '__all__'
-  fields = ['frequency', 'prompt', 'frequency_type', 'photo', 'public']
+  fields = ['frequency', 'prompt', 'frequency_type', 'photo', 'public', 'description', 'user_image_name', 'tag']
+
+  def __init__(self, *args, **kwargs):
+        super(ImageForm, self).__init__(*args, **kwargs)
+        # Set 'required' attribute of the photo field to False
+        self.fields['photo'].required = False
 #   labels = {'photo':''}
   
 # class ProfilePicForm(forms.ModelForm): # For uploading Image

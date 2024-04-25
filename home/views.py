@@ -1790,7 +1790,8 @@ class AdminDeductCredit(APIView):
 # -----------------------------------------------ADMIN API's ---------------------------------------------------------------
 
 #----------------------Code copied from Keywordlit Project--------------------------------------------------------------
-
+from django.core.files.temp import NamedTemporaryFile
+import tempfile
 class UploadImageView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -1806,7 +1807,51 @@ class UploadImageView(APIView):
 
 
     def post(self, request):
-        form = ImageForm(request.POST, request.FILES)
+        mutable_post = request.POST.copy()
+
+        if 'photo' in request.FILES:
+            form = ImageForm(request.POST, request.FILES)
+        elif 'photo_url' in request.data:
+            # Download the image from the provided URL and create a temporary file
+            # photo_url = request.data['photo_url']
+            # try:
+            #     response = requests.get(photo_url, stream=True)
+            #     response.raise_for_status()
+            # except requests.exceptions.RequestException as e:
+            #     return JsonResponse({'Message': f'Failed to fetch image from URL: {str(e)}'}, status=400)
+            
+            photo_url = request.data['photo_url']
+            try:
+                res = requests.head(photo_url)
+                content_length = res.headers.get('content-length')
+                if content_length and int(content_length) > int(f'{settings.MAX_IMAGE_SIZE_MB}') * 1024 * 1024:  # Check if size exceeds 20 MB
+                    return JsonResponse({'Message': f'Image exceeds the {settings.MAX_IMAGE_SIZE_MB} MB limit!'}, status=400)
+                else:
+                    response = requests.get(photo_url, stream=True)
+                    response.raise_for_status()
+                    # Proceed with your code for handling the image
+            except requests.exceptions.RequestException as e:
+                return JsonResponse({'Message': f'Failed to fetch image from URL: {str(e)}'}, status=400)
+
+            # Create a temporary file to save the downloaded image
+            img_temp = tempfile.NamedTemporaryFile(delete=False)
+            # img_temp = NamedTemporaryFile(delete=False)
+            img_temp.write(response.content)
+            img_temp.flush()
+            photo = None
+
+            mutable_post['photo'] = img_temp
+            form = ImageForm(mutable_post, request.FILES)
+
+            # Create dummy POST data with 'photo' field set to the downloaded image file
+            # request.POST = request.POST.copy()
+            # request.FILES = {'photo': img_temp}
+            # form = ImageForm(request.POST, request.FILES)
+        else:
+            return JsonResponse({'Message': 'No valid image provided.'}, status=400)
+
+
+        # form = ImageForm(request.POST, request.FILES)
         if form.is_valid():
             # Set the user before saving the form
             user_id = get_user_id_from_token(request)
@@ -1814,15 +1859,17 @@ class UploadImageView(APIView):
             if not user:
                 return Response({'Message': 'User Not found.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # if user.credit < 1:
-            #     msg = 'Insufficient credit to perform this action.'
-            #     return Response({"Message": msg}, status=status.HTTP_402_PAYMENT_REQUIRED)
+            if user.credit < 1:
+                msg = 'Insufficient credit to perform this action.'
+                return Response({"Message": msg}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
             print("the user is: ",user.email)
             # Retrieve the uploaded file from request.FILES
-            photo = request.FILES.get('photo')
-            if not photo:
-                return JsonResponse({'Message': 'No file uploaded'}, status=400)
+            # photo = request.FILES.get('photo')
+            # if not photo:
+            #     return JsonResponse({'Message': 'No file uploaded'}, status=400)
+            print("The request with all the parameter are :",request.data)
+            print("The request with POST AND ALL the parameter are :",request.POST)
             form.instance.user = user
             print("form.instance.user :",form.instance.user)
             frequency = form.cleaned_data.get('frequency')
@@ -1830,22 +1877,33 @@ class UploadImageView(APIView):
             frequency_type = form.cleaned_data.get('frequency_type')
             #photo = form.cleaned_data.get('photo')
             public = form.cleaned_data.get('public')
-            
+
+            user_image_name = form.cleaned_data.get('user_image_name')
+            tag = form.cleaned_data.get('tag')
+            description = form.cleaned_data.get('description')
+#------------------------------------NEW PHOTO FIELD------------------------------------------------------------------
+            print('The erro might be in here')
+            #photo_url = request.data['photo_url']
+            photo_url = request.data.get('photo_url', None)
+            print('Photo URL : ',photo_url)
+            photo = form.cleaned_data['photo']
+            print('The erro might be up here')
+#------------------------------------NEW PHOTO FIELD------------------------------------------------------------------
             print("The details are as follows for image upload")
             print("frequency:", frequency) 
             print("prompt:", prompt)
             print("frequency_type:", frequency_type)
             print("photo:", photo)
             print("public:", public)
-
-            # print("Secret Key",settings.AWS_SECRET_ACCESS_KEY)
-            # print("Access Key",settings.AWS_ACCESS_KEY_ID)
-
-
+            print("user_image_name:", user_image_name)
+            print("tag:", tag)
+            print("description:", description)
+    
             max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
                 # Check if the size of the uploaded image is less than or equal to the maximum size limit
-            if photo.size > max_size:
-                return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+            if photo_url is None:
+                if photo.size > max_size:
+                    return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
 
 
             # Calculate next regeneration datetime
@@ -1853,13 +1911,11 @@ class UploadImageView(APIView):
             image_name=generate_random_string(15)
             # Save the image file to S3 with the desired file name
             file_name = f"{image_name}.jpg"  # Assuming the image format is JPG
-            file_path = default_storage.save(file_name, photo) # It should be a string so we can split it to our need
+            if photo_url:
+                file_path = default_storage.save(file_name, img_temp) # It should be a string so we can split it to our need
+            else:
+                file_path = default_storage.save(file_name, photo)
             print("The file path is : ",file_path)
-
-            # https://livingimage-original-images.s3.amazonaws.com/vqEugYeFSOwJFGe.jpg
-            # # For example, let's say you want to save the S3 URL
-            # s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
-            # regenerated_image_url = s3_base_url + file_name
 
             # Get the URL using the storage backend
             original_image_url = default_storage.url(file_name)
@@ -1868,13 +1924,6 @@ class UploadImageView(APIView):
             edit_url=original_image_url.split('?')[0]
             print('The Edited url is :',edit_url)
             
-
-            # try:
-            #     print(original_image_url.split('?')[0])
-            # except:
-            #     pass
-
-
             # Save the form data
             image_instance = form.save(commit=False)
             image_instance.nextregeneration_at = next_regeneration_at
@@ -1924,10 +1973,18 @@ class UploadImageView(APIView):
                 credit_balance_left=credit_balance_left
             )
 # --------------------------CODE TO SAVE CREDIT DEDUCTION HISTORY------------------------------------------------------------------
+            # Clean up temporary file if exists
+            if 'img_temp' in locals() and hasattr(img_temp, 'name') and os.path.exists(img_temp.name):
+                img_temp.close()
+                os.unlink(img_temp.name)
             #form.save()
             #return redirect('/api/dashboard/')
             return JsonResponse({'Message': 'Image Upload successful.'})
         else:
+            if 'img_temp' in locals() and hasattr(img_temp, 'name') and os.path.exists(img_temp.name):
+                img_temp.close()  # Close the file handle
+                os.unlink(img_temp.name)  # Delete the temporary file
+                print("Temporary Image deleted")
             print("Form is invalid")
             print(form.errors)
             return JsonResponse({'Message': 'Image Upload Unsuccessful.'}, status=400)

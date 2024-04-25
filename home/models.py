@@ -146,7 +146,7 @@ class Image(TimeStampModel):
     )
     id=models.BigAutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    photo = models.ImageField()#upload_to="myimage")
+    photo = models.ImageField(blank=True, null=True)#upload_to="myimage")
     image_name = models.CharField(max_length=255)
     prompt = models.TextField(max_length=200,null=True, blank=True)  # PROMPT IS NOW OPTIONAL
     frequency_type = models.CharField(max_length=25, choices=frequency_type_choice)
