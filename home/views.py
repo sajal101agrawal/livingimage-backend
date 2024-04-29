@@ -1613,9 +1613,9 @@ class DeleteImageAdmin(APIView):
             
             if len(error_messages)==0:
 
-                return JsonResponse({'Message': 'Image deleted successfully.'})
+                return JsonResponse({'Message': 'Image deleted successfully.'}, status=status.HTTP_200_OK)
             else:
-                return JsonResponse({'Message': 'Some images deleted successfully, But some selected image id are wrong'})
+                return JsonResponse({'Message': 'Some images deleted successfully, But some selected image id are wrong'}, status=status.HTTP_400_BAD_REQUEST)
                 
 
             # return JsonResponse({'Message': 'Image deleted successfully.'})
@@ -2169,9 +2169,9 @@ class DeleteImageView(APIView):
                 
                 if len(error_messages)==0:
 
-                    return JsonResponse({'Message': 'Image deleted successfully.'})
+                    return JsonResponse({'Message': 'Image deleted successfully.'}, status=status.HTTP_200_OK)
                 else:
-                    return JsonResponse({'Message': 'Some images deleted successfully, But some selected image id are wrong'})
+                    return JsonResponse({'Message': 'Some images deleted successfully, But some selected image id are wrong'}, status=status.HTTP_400_BAD_REQUEST)
                 # else:
                 #     return JsonResponse({'Message': 'Image file not found in S3.'}, status=404)
             else:
