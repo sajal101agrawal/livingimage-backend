@@ -278,7 +278,7 @@ class UserProfileView(APIView):
             diposit_history.append(tmp)
         
         if user.profile_photo:
-            photo = user.profile_photo
+            photo = str(user.profile_photo)
         else:
             photo = None
                 
