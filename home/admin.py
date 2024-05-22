@@ -14,7 +14,7 @@ class CustomUserAdmin(UserAdmin):
     form = CustomUserChangeForm
     model = CustomUser
     # list_display = ["email", "username", 'is_user_verified', 'credit']
-    list_display = ["email", "username", 'profile_photo', 'is_user_verified', 'credit']
+    list_display = ["email", "id", "username", 'profile_photo', 'is_user_verified', 'credit']
     def user_credit(self, obj):
             return str(obj.user.profile_photo)
     user_credit.short_description = 'Profile Photo'  # Customize the column header
@@ -29,15 +29,20 @@ class HistoryAdmin(admin.ModelAdmin):
 
 
 
+class MembershipAdmin(admin.ModelAdmin):
+    list_display = ['name','price','duration_days']
+
 class CreditPricingAdmin(admin.ModelAdmin):
-    list_display = ['price']
+    list_display = ['price']    
 
 class RegeneratedImageAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'original_image_id', 'original_image_name', 'public', 'regenerated_image', 'regenerated_at', 'nextregeneration_at', 'created', 'updated']
     search_fields = ['user__username', 'created']
     list_filter = ['public', 'created']
 
+admin.site.register(Membership)
 
+admin.site.register(PaymentRecord)
 
 admin.site.register(RegeneratedImage,RegeneratedImageAdmin)
 

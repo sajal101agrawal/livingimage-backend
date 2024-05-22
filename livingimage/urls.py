@@ -60,7 +60,16 @@ urlpatterns = [
     path('api/admin/add-credit/', AdminAddCredit.as_view(), name='AdminAddCredit'),  # Add Credit Admin
     path('api/admin/deduct-credit/', AdminDeductCredit.as_view(), name='AdminDeductCredit'),  # Add Credit Admin
 
-    
+    path('checkout/', CheckoutView.as_view(), name='checkout'),    # STRIPE
+    path('payment/success/', PaymentSuccessView.as_view(), name='payment_success'),   # STRIPE
+    path('payment/failed/', PaymentFailedView.as_view(), name='payment_failed'),    # STRIPE
+    path('stripe/webhook/', StripeWebhookView.as_view(), name='stripe_webhook'),     # STRIPE
+    path('create_stripe_customer/', CreateStripeCustomerView.as_view(), name='create_stripe_customer'),   # STRIPE
+    path('subscription_management/', SubscriptionManagementView.as_view(), name='subscription_management'),   # STRIPE
+
+    # path('api/man/', man.as_view(), name='man'), # STRIPE
+
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # print(static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT))

@@ -54,6 +54,18 @@ class openai_account(TimeStampModel):
     status = models.CharField(max_length=25,choices=STATUS,default='ACTIVE')
 
 
+#--------------------------------------------------Membership Models----------------------------------------------------------------
+class Membership(models.Model):
+    name = models.CharField(max_length=100)             # Added for Stripe
+    price = models.DecimalField(max_digits=10, decimal_places=2)           # Added for Stripe
+    duration_days = models.IntegerField()               # Added for Stripe
+
+    def __str__(self):
+        return self.name
+#--------------------------------------------------Membership Models----------------------------------------------------------------
+
+
+
 
 #-----------------------------------------------------Code BY Adil-------------------------------------------------------------
 class CustomUser(AbstractUser,TimeStampModel):
@@ -70,6 +82,10 @@ class CustomUser(AbstractUser,TimeStampModel):
     #Mobile_number = models.IntegerField(default=0)
     #gender = models.CharField(max_length=25, choices=GENDER, null=True, blank=True)
     profile_photo = models.ImageField(upload_to='profile_pic/', blank=True, null=True) #default='default-user-profile.jpg')
+    stripe_customer_id = models.CharField(max_length=255, blank=True, null=True)  # Added for Stripe
+    is_subscribed = models.BooleanField(default=False)  # Added for Stripe
+    membership = models.ForeignKey(Membership, null=True, blank=True, on_delete=models.SET_NULL)  # Added for Stripe
+    membership_expiry = models.DateTimeField(null=True, blank=True)  
     REQUIRED_FIELDS = ["email","is_user_verified"]
 
     objects = UserManager()
@@ -199,6 +215,17 @@ class CreditPricing(models.Model):
 
 #---------------------------------------------------Credit Pricing Models-------------------------------------------------------------
 
+
+#--------------------------------------------------Subscription Models----------------------------------------------------------------
+class Subscription(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)    # Added for Stripe
+    stripe_subscription_id = models.CharField(max_length=100)         # Added for Stripe
+    status = models.CharField(max_length=20)                     # Added for Stripe
+    current_period_end = models.DateTimeField()                # Added for Stripe
+#--------------------------------------------------Subscription Models----------------------------------------------------------------
+
+
+
  
 #---------------------------------------------------Payment Models-------------------------------------------------------------
 
@@ -207,10 +234,12 @@ class PaymentRecord(TimeStampModel):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     total_credits = models.IntegerField()
     date_time = models.DateTimeField()
-    payment_status = models.CharField(max_length=100)
+    # payment_status = models.CharField(max_length=100)
+    payment_status = models.CharField(max_length=20, choices=[('Pending', 'Pending'), ('Paid', 'Paid'), ('Failed', 'Failed')]) # Added for Stripe
     payment_id = models.CharField(max_length=100)
     payment_mode = models.CharField(max_length=100)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    membership = models.ForeignKey(Membership, null=True, blank=True, on_delete=models.SET_NULL)  # Added for Stripe
 
 class CreditHistory(TimeStampModel):
     id = models.BigAutoField(primary_key=True)
@@ -223,6 +252,9 @@ class CreditHistory(TimeStampModel):
     credit_balance_left = models.IntegerField()
 
 #---------------------------------------------------Payment Models-------------------------------------------------------------
+
+
+
 
 
 # Specify unique related_name attributes for the reverse relationships

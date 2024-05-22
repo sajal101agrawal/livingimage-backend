@@ -118,6 +118,11 @@ def regenerate_image(image_id):
         original_image_id = original_image.id
         original_image_name = original_image.image_name
 
+        user = original_image.user
+        if user.credit < 1:
+            msg = 'Insufficient credit to perform this action.'
+            return {"Message": msg}
+
         # Download the image data from the URL
         image_data = requests.get(image_url).content
 
@@ -157,6 +162,13 @@ def regenerate_image(image_id):
 
     try:
         original_image = Image.objects.get(id=image_id)
+
+        # img_main = Image.objects.filter(id=image_id).first()
+        user = original_image.user
+        if user.credit < 1:
+            msg = 'Insufficient credit to perform this action.'
+            return {"Message": msg}
+        
         # Call the logic to regenerate and save the image here
 
         # LOGIC 
