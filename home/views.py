@@ -3085,6 +3085,7 @@ class CheckoutView(APIView):
             membership = Membership.objects.get(id=membership_id)
             total_amount = membership.price
             item_name = membership.name
+            total_credits = membership.credits
         else:
             credit_price = CreditPricing.objects.first().price
             total_amount = total_credits * credit_price
@@ -3159,7 +3160,44 @@ class StripeWebhookView(View):
                 user = payment_record.user
                 user.membership = payment_record.membership
                 user.membership_expiry = timezone.now() + timedelta(days=payment_record.membership.duration_days)
+                user.credit = user.credit + payment_record.total_credits
                 user.save()
+
+                addition_description =f"Added {payment_record.total_credits} credit to the user {user.email} via stripe"
+
+                # HERE CREDITHISTORY RECORD SHOULD ALSO BE CREATED
+                CreditHistory.objects.create(
+                user=user,
+                total_credits_deducted=payment_record.total_credits,
+                type_of_transaction="Credit Addition",
+                date_time=datetime.now(pytz.utc),
+                payment_id=payment_record.payment_id,  # You can leave this blank for credit deductions
+                description=addition_description,
+                credit_balance_left=user.credit
+                )
+
+
+
+            else:
+                user = payment_record.user
+                # user.membership = payment_record.membership
+                # user.membership_expiry = timezone.now() + timedelta(days=payment_record.membership.duration_days)
+                user.credit = user.credit + payment_record.total_credits
+                user.save()
+
+                addition_description =f"Added {payment_record.total_credits} credit to the user {user.email} via stripe"
+
+                # HERE CREDITHISTORY RECORD SHOULD ALSO BE CREATED
+                CreditHistory.objects.create(
+                user=user,
+                total_credits_deducted=payment_record.total_credits,
+                type_of_transaction="Credit Addition",
+                date_time=datetime.now(pytz.utc),
+                payment_id=payment_record.payment_id,  # You can leave this blank for credit deductions
+                description=addition_description,
+                credit_balance_left=user.credit
+                )
+
 
         elif event['type'] == 'checkout.session.expired':
             session = event['data']['object']
@@ -3211,3 +3249,153 @@ class SubscriptionManagementView(View):
                 return HttpResponse(f"Error retrieving subscriptions: {e}", status=400)
         else:
             return redirect('login')
+        
+
+class get_membership(APIView):
+    def post(self,request):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+        lst=[]
+        membership_list = Membership.objects.all()
+        # print(settings.YOUR_DOMAIN)
+        # print(type(settings.YOUR_DOMAIN))
+        if membership_list:
+            for membership in membership_list:
+                mem={
+                    "Membership ID":membership.id,
+                    "Membership Name":membership.name,
+                    "Membership Price":membership.price,
+                    "Membership Credits":membership.credits,
+                    "Membership Duration":membership.duration_days,
+                }
+
+                lst.append(mem)
+
+            return Response({"Message":"Membership Details fetched Succesfully","Membership_details":lst})
+        else:
+            return Response({"Message":"No Membership Details Found","Membership_details":None})
+
+
+
+
+class AdminUpdateMembership(APIView):
+    """ 
+    Update-Membership-details if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not found the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if 'membership_id' not in request.data or not request.data.get('membership_id'):
+            msg = 'could not found the membership_id'
+            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits']):
+            msg = 'No details given to update in Membership.'
+            return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
+            
+        membership = Membership.objects.filter(id=request.data.get('membership_id')).first()
+        if not membership :
+            return Response({'Message' : 'Could not got the Membership Details'}, status=status.HTTP_204_NO_CONTENT)
+
+        try:
+
+            if 'price' in request.data:
+                membership.price = request.data['price']
+            if 'name' in request.data:
+                membership.name = request.data['name']
+            if 'duration_days' in request.data:
+                membership.duration_days = request.data['duration_days']
+            if 'credits' in request.data:
+                membership.credits = request.data['credits']
+
+            membership.save()
+            
+            msg = 'Successfully Modified the Membership details'
+            status_code = status.HTTP_200_OK
+            
+        except Exception as e:
+            msg = f'Membership details Update Failed: {str(e)}'
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return Response({'Message' : msg}, status=status_code)
+    
+class get_credit_detail(APIView):
+    """ 
+    Get-Credit-details if token is of user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def post(self,request):
+        user_id=get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"Message": "User not found"})
+
+        if not "transaction_type" in request.data or not request.data.get("transaction_type"):
+            return Response({"Message":"Please specify the Transaction type eg: Credit Addition or Credit Deduction"})
+        
+        # if not "date_filter" in request.data or not request.data.get("date_filter"):
+        #     return Response({"Message":"Please specify the date_filter eg: day, week, month or custom"})
+        
+        # # type_of_transaction="Credit Addition",Credit Deduction
+        date_filter = request.data.get("date_filter")
+        # now=datetime.now(pytz.utc)
+
+        # if date_filter == 'month' or date_filter == 'week' or date_filter == 'year':
+        #     if date_filter == 'week':
+        #         end_date = now
+        #         start_date = now - timedelta(weeks=periods)
+        #     elif date_filter == 'month':
+        #         end_date = now
+        #         start_date = now - relativedelta(months=periods)
+        #     elif date_filter == 'year':
+        #         end_date = now
+        #         start_date = now - relativedelta(years=periods)
+        # else:
+        #     start_date=start_date
+        #     end_date=end_date
+
+            # "total_deposit_amount" : DepositeMoney.objects.filter(status="COMPLETE",created__gte=start_date,  created__lte=end_date).aggregate(total_amount=Sum('Amount'))['total_amount'],
+
+
+
+        try:
+            transaction_type = request.data.get("transaction_type")
+
+            # credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user, datetime__gte=start_date,  datetime__lte=end_date)
+            credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user)
+
+
+            lst=[]
+            if credit_detail:
+                for credits in credit_detail:
+                    mem={
+                        "CreditHistory ID":credits.id,
+                        "CreditHistory Credits":credits.total_credits_deducted,
+                        "CreditHistory Transaction Type":credits.type_of_transaction,
+                        "CreditHistory Payment ID":credits.payment_id,
+                        "CreditHistory Date Time":credits.date_time.strftime("%d/%m/%Y %H:%M:%S"),                
+                    }
+
+                    lst.append(mem)
+
+
+
+            msg = f'Succesfully get the Credit details'
+            status_code = status.HTTP_200_OK
+            return Response({'Message' : msg, "Credit_details": lst}, status=status_code)
+
+
+        except Exception as e:
+            msg = f'Failed to get the Credit details: {str(e)}'
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            return Response({'Message' : msg}, status=status_code)
+

@@ -60,12 +60,24 @@ urlpatterns = [
     path('api/admin/add-credit/', AdminAddCredit.as_view(), name='AdminAddCredit'),  # Add Credit Admin
     path('api/admin/deduct-credit/', AdminDeductCredit.as_view(), name='AdminDeductCredit'),  # Add Credit Admin
 
+
+    path('api/admin/update-membership/', AdminUpdateMembership.as_view(), name='AdminUpdateMembership'),  # Membership
+
+
+
     path('checkout/', CheckoutView.as_view(), name='checkout'),    # STRIPE
     path('payment/success/', PaymentSuccessView.as_view(), name='payment_success'),   # STRIPE
     path('payment/failed/', PaymentFailedView.as_view(), name='payment_failed'),    # STRIPE
     path('stripe/webhook/', StripeWebhookView.as_view(), name='stripe_webhook'),     # STRIPE
     path('create_stripe_customer/', CreateStripeCustomerView.as_view(), name='create_stripe_customer'),   # STRIPE
     path('subscription_management/', SubscriptionManagementView.as_view(), name='subscription_management'),   # STRIPE
+
+
+    path('api/get_membership/', get_membership.as_view(), name='get_membership'),
+
+    path('api/get_credit_detail/', get_credit_detail.as_view(), name='get_credit_detail'),
+
+
 
     # path('api/man/', man.as_view(), name='man'), # STRIPE
 
