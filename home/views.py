@@ -191,7 +191,11 @@ class UserLoginView(APIView):
         if user.check_password(password)  :
             if user.is_user_verified:
                 token = get_tokens_for_user(user)
-                return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                if user.membership:
+                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+
             else:
 #--------------------------If user is not verified then OTP is sent to user-----------------------------------------------------------
                 verification_code = random.randint(100000, 999999)
