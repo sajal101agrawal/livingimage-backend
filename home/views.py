@@ -2841,6 +2841,7 @@ class StripeWebhookView(View):
                 user.membership = payment_record.membership
                 user.membership_expiry = timezone.now() + timedelta(days=payment_record.membership.duration_days)
                 user.credit = user.credit + payment_record.total_credits
+                user.is_subscribed=True
                 user.save()
 
                 addition_description =f"Added {payment_record.total_credits} credit to the user {user.email} via stripe"
@@ -2887,6 +2888,7 @@ class StripeWebhookView(View):
 
         return HttpResponse(status=200)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CreateStripeCustomerView(View):
     def get(self, request):
 
@@ -2910,6 +2912,7 @@ class CreateStripeCustomerView(View):
         else:
             return redirect('login')
 
+@method_decorator(csrf_exempt, name='dispatch')
 class SubscriptionManagementView(View):
     def get(self, request):
 
