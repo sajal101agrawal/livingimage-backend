@@ -223,11 +223,11 @@ class CreditPricing(models.Model):
 
 
 #--------------------------------------------------Subscription Models----------------------------------------------------------------
-class Subscription(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)    # Added for Stripe
-    stripe_subscription_id = models.CharField(max_length=100)         # Added for Stripe
-    status = models.CharField(max_length=20)                     # Added for Stripe
-    current_period_end = models.DateTimeField()                # Added for Stripe
+# class Subscription(models.Model):
+#     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)    # Added for Stripe
+#     stripe_subscription_id = models.CharField(max_length=100)         # Added for Stripe
+#     status = models.CharField(max_length=20)                     # Added for Stripe
+#     current_period_end = models.DateTimeField()                # Added for Stripe
 #--------------------------------------------------Subscription Models----------------------------------------------------------------
 
 
