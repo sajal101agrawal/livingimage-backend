@@ -2836,6 +2836,16 @@ class StripeWebhookView(View):
             payment_record.payment_status = 'Paid'
             payment_record.save()
 
+            user = payment_record.user
+            if not user.stripe_customer_id:
+                customer = stripe.Customer.create(
+                    email=user.email,
+                    name=user.get_full_name(),
+                )
+                user.stripe_customer_id = customer.id
+                user.save()
+                # return redirect('create_stripe_customer')
+
             if payment_record.membership:
                 user = payment_record.user
                 user.membership = payment_record.membership
@@ -2885,6 +2895,14 @@ class StripeWebhookView(View):
             payment_record = PaymentRecord.objects.get(payment_id=session['id'])
             payment_record.payment_status = 'Failed'
             payment_record.save()
+            user = payment_record.user
+            if not user.stripe_customer_id:
+                customer = stripe.Customer.create(
+                    email=user.email,
+                    name=user.get_full_name(),
+                )
+                user.stripe_customer_id = customer.id
+                user.save()
 
         return HttpResponse(status=200)
 
