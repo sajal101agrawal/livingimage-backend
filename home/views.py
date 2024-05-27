@@ -136,7 +136,11 @@ class UserEmailVerificationView(APIView):
                 verification_code = random.randint(100000, 999999)# Extra Code added to change the code after Process because same code will be used multiple times ex- same code will be used to chnage password.
                 user.verification_code = verification_code# Extra Code added to change the code after Process because same code will be used multiple times ex- same code will be used to chnage password.
                 user.save()
-                return Response({'token':token,'Message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+                if user.membership:
+                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Email verified successfully.', "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Email verified successfully.', "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                # return Response({'token':token,'Message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
             else:
                 return Response({'Message': 'Verification code is incorrect. Resent verification code.'}, status=status.HTTP_400_BAD_REQUEST)
         except CustomUser.DoesNotExist:
