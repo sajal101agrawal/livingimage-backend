@@ -32,6 +32,9 @@ class HistoryAdmin(admin.ModelAdmin):
 class MembershipAdmin(admin.ModelAdmin):
     list_display = ['name','price','duration_days']
 
+class CreditHistoryAdmin(admin.ModelAdmin):
+    list_display = ['id','user','total_credits_deducted','type_of_transaction','date_time','payment_id','description','credit_balance_left']
+
 class CreditPricingAdmin(admin.ModelAdmin):
     list_display = ['price']    
 
@@ -41,6 +44,8 @@ class RegeneratedImageAdmin(admin.ModelAdmin):
     list_filter = ['public', 'created']
 
 admin.site.register(Membership)
+
+admin.site.register(CreditHistory)
 
 admin.site.register(PaymentRecord)
 

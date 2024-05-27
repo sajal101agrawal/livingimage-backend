@@ -3142,6 +3142,9 @@ class StripeWebhookView(View):
     def post(self, request):
         payload = request.body
         sig_header = request.headers.get('Stripe-Signature')
+        print("sig_header :",sig_header)
+        print("The Paylaod is: ",payload)
+        print("The settings.STRIPE_WEBHOOK_SECRET: ",settings.STRIPE_WEBHOOK_SECRET)
 
         try:
             event = stripe.Webhook.construct_event(
@@ -3152,6 +3155,7 @@ class StripeWebhookView(View):
 
         if event['type'] == 'checkout.session.completed':
             session = event['data']['object']
+            print(session)
             payment_record = PaymentRecord.objects.get(payment_id=session['id'])
             payment_record.payment_status = 'Paid'
             payment_record.save()
@@ -3253,10 +3257,10 @@ class SubscriptionManagementView(View):
 
 class get_membership(APIView):
     def post(self,request):
-        user_id = get_user_id_from_token(request)
-        user = CustomUser.objects.filter(id=user_id).first()
-        if not user:
-            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+        # user_id = get_user_id_from_token(request)
+        # user = CustomUser.objects.filter(id=user_id).first()
+        # if not user:
+        #     return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
         lst=[]
         membership_list = Membership.objects.all()
         # print(settings.YOUR_DOMAIN)
@@ -3269,6 +3273,11 @@ class get_membership(APIView):
                     "Membership Price":membership.price,
                     "Membership Credits":membership.credits,
                     "Membership Duration":membership.duration_days,
+                    "Membership Feature 1":membership.membership_feature_1,
+                    "Membership Feature 2":membership.membership_feature_2,
+                    "Membership Feature 3":membership.membership_feature_3,
+                    "Membership Feature 4":membership.membership_feature_4,
+                    "Membership Feature 5":membership.membership_feature_5,
                 }
 
                 lst.append(mem)
@@ -3278,7 +3287,8 @@ class get_membership(APIView):
             return Response({"Message":"No Membership Details Found","Membership_details":None})
 
 
-
+from dateutil.relativedelta import relativedelta   
+from datetime import datetime
 
 class AdminUpdateMembership(APIView):
     """ 
@@ -3298,7 +3308,7 @@ class AdminUpdateMembership(APIView):
             msg = 'could not found the membership_id'
             return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
         
-        if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits']):
+        if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits', 'Membership Feature 1', 'Membership Feature 2', 'Membership Feature 3', 'Membership Feature 4', 'Membership Feature 5']):
             msg = 'No details given to update in Membership.'
             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -3342,36 +3352,62 @@ class get_credit_detail(APIView):
         if not "transaction_type" in request.data or not request.data.get("transaction_type"):
             return Response({"Message":"Please specify the Transaction type eg: Credit Addition or Credit Deduction"})
         
-        # if not "date_filter" in request.data or not request.data.get("date_filter"):
-        #     return Response({"Message":"Please specify the date_filter eg: day, week, month or custom"})
-        
+        if not "date_filter" in request.data or not request.data.get("date_filter"):
+            return Response({"Message":"Please specify the date_filter eg: day, week, month, year or custom"})
+
         # # type_of_transaction="Credit Addition",Credit Deduction
         date_filter = request.data.get("date_filter")
-        # now=datetime.now(pytz.utc)
 
-        # if date_filter == 'month' or date_filter == 'week' or date_filter == 'year':
-        #     if date_filter == 'week':
-        #         end_date = now
-        #         start_date = now - timedelta(weeks=periods)
-        #     elif date_filter == 'month':
-        #         end_date = now
-        #         start_date = now - relativedelta(months=periods)
-        #     elif date_filter == 'year':
-        #         end_date = now
-        #         start_date = now - relativedelta(years=periods)
-        # else:
-        #     start_date=start_date
-        #     end_date=end_date
+        if date_filter:
+            if date_filter == "custom":
+                if not "start_date" in request.data or not request.data.get("start_date"):
+                    return Response({"Message":"Please specify the start_date eg: 20-04-2020"})
+                if not "end_date" in request.data or not request.data.get("end_date"):
+                    return Response({"Message":"Please specify the end_date eg: 20-10-2020"})
+                # start_date=request.data.get("start_date").strftime("%d/%m/%Y %H:%M:%S")
+                # end_date=request.data.get("end_date").strftime("%d/%m/%Y %H:%M:%S")
+
+                try:
+                    start_date = datetime.strptime(request.data.get("start_date"), "%d-%m-%Y")
+                    end_date = datetime.strptime(request.data.get("end_date"), "%d-%m-%Y")
+                except ValueError:
+                    return Response({"Message":"Date format should be DD-MM-YYYY"})
+            else:
+                if not "frequency" in request.data or not request.data.get("frequency"):
+                    return Response({"Message":"Please specify the frequency eg: 1,2 ..."})
+                frequency = request.data.get("frequency")
+
+
+
+
+        #periods = request.data.get("periods")
+        now=datetime.now(pytz.utc)
+
+        if date_filter == 'month' or date_filter == 'week' or date_filter == 'year' or date_filter == 'day':
+            if date_filter == 'week':
+                end_date = now
+                start_date = now - timedelta(weeks=frequency)
+            elif date_filter == 'month':
+                end_date = now
+                start_date = now - relativedelta(months=frequency)
+            elif date_filter == 'year':
+                end_date = now
+                start_date = now - relativedelta(years=frequency)
+            elif date_filter == 'day':
+                end_date = now
+                start_date = now - timedelta(days=frequency)
+        else:
+            start_date=start_date
+            end_date=end_date
 
             # "total_deposit_amount" : DepositeMoney.objects.filter(status="COMPLETE",created__gte=start_date,  created__lte=end_date).aggregate(total_amount=Sum('Amount'))['total_amount'],
-
 
 
         try:
             transaction_type = request.data.get("transaction_type")
 
-            # credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user, datetime__gte=start_date,  datetime__lte=end_date)
-            credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user)
+            credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user, date_time__gte=start_date,  date_time__lte=end_date)
+            # credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user)
 
 
             lst=[]
