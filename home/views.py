@@ -197,12 +197,13 @@ class UserLoginView(APIView):
         if user.check_password(password)  :
             if user.is_user_verified:
                 token = get_tokens_for_user(user)
+                user, is_superuser = IsSuperUser(user.id)
                 if user.membership:
                     Mem=Membership.objects.filter(name=user.membership.name).first()
                     memebership_id=Mem.id
-                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership_id":memebership_id, "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                    return Response({'token':token,'verified' : user.is_user_verified, 'admin' : is_superuser, 'Message':'Login Success', "membership_id":memebership_id, "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
                 else:
-                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership_id":None, "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                    return Response({'token':token,'verified' : user.is_user_verified, 'admin' : is_superuser, 'Message':'Login Success', "membership_id":None, "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
 
             else:
 #--------------------------If user is not verified then OTP is sent to user-----------------------------------------------------------
