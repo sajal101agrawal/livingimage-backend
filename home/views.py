@@ -2810,8 +2810,54 @@ class CheckoutView(APIView):
 class PaymentSuccessView(TemplateView):
     template_name = 'payment_success.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_id = self.request.user.id  # Assuming the user is authenticated
+        if user_id:
+            payment_record = PaymentRecord.objects.filter(user_id=user_id).order_by('-date_time').first()
+            if payment_record:
+                user = payment_record.user
+                context['user'] = user.email
+                context['subscription_status'] = user.is_subscribed
+
+                context['membership_name'] = user.membership.name if user.membership else "No Membership"
+                context['membership_expiry'] = str(user.membership_expiry) if user.membership else "N/A"
+
+                # context['membership_name'] = user.membership.name 
+                # context['membership_expiry'] = str(user.membership_expiry)
+                context['stripe_customer_id'] = user.stripe_customer_id
+                context['is_user_verified'] = user.is_user_verified
+                context['payment_status'] = payment_record.payment_status
+                # context['user'] = payment_record.user
+                context['total_credits'] = payment_record.total_credits
+                context['total_amount'] = payment_record.total_amount
+        return context
+
 class PaymentFailedView(TemplateView):
     template_name = 'payment_failed.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_id = self.request.user.id  # Assuming the user is authenticated
+        if user_id:
+            payment_record = PaymentRecord.objects.filter(user_id=user_id).order_by('-date_time').first()
+            if payment_record:
+                user = payment_record.user
+                context['user'] = user.email
+                context['subscription_status'] = user.is_subscribed
+
+                context['membership_name'] = user.membership.name if user.membership else "No Membership"
+                context['membership_expiry'] = str(user.membership_expiry) if user.membership else "N/A"
+
+                # context['membership_name'] = user.membership.name 
+                # context['membership_expiry'] = str(user.membership_expiry)
+                context['stripe_customer_id'] = user.stripe_customer_id
+                context['is_user_verified'] = user.is_user_verified
+                context['payment_status'] = payment_record.payment_status
+                # context['user'] = payment_record.user
+                context['total_credits'] = payment_record.total_credits
+                context['total_amount'] = payment_record.total_amount
+        return context
 
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(View):
