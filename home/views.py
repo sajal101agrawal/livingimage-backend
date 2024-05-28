@@ -137,9 +137,11 @@ class UserEmailVerificationView(APIView):
                 user.verification_code = verification_code# Extra Code added to change the code after Process because same code will be used multiple times ex- same code will be used to chnage password.
                 user.save()
                 if user.membership:
-                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Email verified successfully.', "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                    Mem=Membership.objects.filter(name=user.membership.name).first()
+                    memebership_id=Mem.id
+                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Email verified successfully.', "membership_id":memebership_id, "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
                 else:
-                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Email verified successfully.', "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Email verified successfully.', "membership_id":None, "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
                 # return Response({'token':token,'Message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
             else:
                 return Response({'Message': 'Verification code is incorrect. Resent verification code.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -196,9 +198,11 @@ class UserLoginView(APIView):
             if user.is_user_verified:
                 token = get_tokens_for_user(user)
                 if user.membership:
-                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                    Mem=Membership.objects.filter(name=user.membership.name).first()
+                    memebership_id=Mem.id
+                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership_id":memebership_id, "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
                 else:
-                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                    return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Login Success', "membership_id":None, "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
 
             else:
 #--------------------------If user is not verified then OTP is sent to user-----------------------------------------------------------
