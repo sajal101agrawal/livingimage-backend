@@ -2650,15 +2650,23 @@ class RecordPaymentAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class GetPaymentHistoryAPIView(APIView):
+class GetPaymentHistory(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, format=None):
-        payments = PaymentRecord.objects.all()
-        serializer = PaymentRecordSerializer(payments, many=True)
-        return Response(serializer.data)
-
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+        payments = PaymentRecord.objects.filter(user=user)
+        if payments:
+            serializer = PaymentRecordSerializer(payments, many=True)
+            # return Response(serializer.data)
+            return Response({"Message":"Payment History fetched Succesfully","Payment_History":serializer.data}, status=status.HTTP_200_OK)
+        else:
+            return Response({"Message":"No Payment History Found","Payment_History":None}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
 class GetCreditHistoryAPIView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -2815,54 +2823,8 @@ class CheckoutView(APIView):
 class PaymentSuccessView(TemplateView):
     template_name = 'payment_success.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user_id = self.request.user.id  # Assuming the user is authenticated
-        if user_id:
-            payment_record = PaymentRecord.objects.filter(user_id=user_id).order_by('-date_time').first()
-            if payment_record:
-                user = payment_record.user
-                context['user'] = user.email
-                context['subscription_status'] = user.is_subscribed
-
-                context['membership_name'] = user.membership.name if user.membership else "No Membership"
-                context['membership_expiry'] = str(user.membership_expiry) if user.membership else "N/A"
-
-                # context['membership_name'] = user.membership.name 
-                # context['membership_expiry'] = str(user.membership_expiry)
-                context['stripe_customer_id'] = user.stripe_customer_id
-                context['is_user_verified'] = user.is_user_verified
-                context['payment_status'] = payment_record.payment_status
-                # context['user'] = payment_record.user
-                context['total_credits'] = payment_record.total_credits
-                context['total_amount'] = payment_record.total_amount
-        return context
-
 class PaymentFailedView(TemplateView):
     template_name = 'payment_failed.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user_id = self.request.user.id  # Assuming the user is authenticated
-        if user_id:
-            payment_record = PaymentRecord.objects.filter(user_id=user_id).order_by('-date_time').first()
-            if payment_record:
-                user = payment_record.user
-                context['user'] = user.email
-                context['subscription_status'] = user.is_subscribed
-
-                context['membership_name'] = user.membership.name if user.membership else "No Membership"
-                context['membership_expiry'] = str(user.membership_expiry) if user.membership else "N/A"
-
-                # context['membership_name'] = user.membership.name 
-                # context['membership_expiry'] = str(user.membership_expiry)
-                context['stripe_customer_id'] = user.stripe_customer_id
-                context['is_user_verified'] = user.is_user_verified
-                context['payment_status'] = payment_record.payment_status
-                # context['user'] = payment_record.user
-                context['total_credits'] = payment_record.total_credits
-                context['total_amount'] = payment_record.total_amount
-        return context
 
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(View):
@@ -3202,3 +3164,45 @@ class get_credit_detail(APIView):
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             return Response({'Message' : msg}, status=status_code)
 
+
+
+class UserPaymentLatest(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+        payments = PaymentRecord.objects.filter(user_id=user_id).order_by('-date_time').first()
+        if payments:
+            stripe_id = user.stripe_customer_id
+            subscription_status = user.is_subscribed
+            membership_expiry = user.membership_expiry
+            membership_name = user.membership.name
+
+
+            lst = {
+                "payment_id": payments.id,
+                "total_amount": str(payments.total_amount),
+                "total_credits": payments.total_credits,
+                "date_time": str(payments.date_time),
+                "payment_status": payments.payment_status,
+                "payment_mode": payments.payment_mode,
+                "payment_description": payments.payment_description,
+                "user": user.id,
+                "membership": payments.membership.id,
+                "stripe_customer_id":stripe_id,
+                "subscription_status":subscription_status,
+                "membership_expiry":str(membership_expiry),
+                "membership_name":membership_name,
+
+            }
+
+
+            # serializer = PaymentRecordSerializer(payments, many=False)
+            # return Response(serializer.data)
+            return Response({"Message":"Payment Details fetched Succesfully","Payment_details":lst}, status=status.HTTP_200_OK)
+        else:
+            return Response({"Message":"No Payment Details Found","Payment_details":None}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

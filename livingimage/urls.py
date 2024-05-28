@@ -15,7 +15,7 @@ urlpatterns = [
 
     path('api/credit-pricing/', CreditPricingAPIView.as_view(), name='credit_pricing'), #CREDIT
     path('api/record-payment/', RecordPaymentAPIView.as_view()), #PAYMENT
-    path('api/get-payment-history/', GetPaymentHistoryAPIView.as_view()), #PAYMENT
+    # path('api/get-payment-history/', GetPaymentHistoryAPIView.as_view()), #PAYMENT
     # path('api/get-credit-history/', GetCreditHistoryAPIView.as_view()), #PAYMENT
 
     path('api/regenerate/', RegenerateImageView.as_view()), # REGENERATE IMAGE TEMPORARY as it will be automated
@@ -77,9 +77,9 @@ urlpatterns = [
 
     path('api/get_credit_detail/', get_credit_detail.as_view(), name='get_credit_detail'),
 
+    path('api/get_payment_history/', GetPaymentHistory.as_view(), name='GetPaymentHistory'),
 
-
-    # path('api/man/', man.as_view(), name='man'), # STRIPE
+    path('api/get_latest_payment/', UserPaymentLatest.as_view(), name='UserPaymentLatest'), 
 
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
