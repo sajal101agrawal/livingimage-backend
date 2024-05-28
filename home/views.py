@@ -2984,6 +2984,26 @@ class SubscriptionManagementView(View):
             return redirect('login')
         
 
+class CancelMembershipView(APIView):
+    def post(self, request):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id=user_id).first()
+        
+        if not user:
+            return JsonResponse({"Message": "User not found"}, status=404)
+        
+        if not user.is_subscribed:
+            return JsonResponse({"Message": "User is not subscribed to any membership"}, status=400)
+        
+        user.is_subscribed = False
+        user.membership_expiry = None
+        user.membership = None
+        user.save()
+        
+        return JsonResponse({"Message": "Membership cancelled successfully"}, status=200)
+
+
+
 class get_membership(APIView):
     def post(self,request):
         # user_id = get_user_id_from_token(request)
