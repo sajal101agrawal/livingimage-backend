@@ -246,6 +246,7 @@ class PaymentRecord(TimeStampModel):
     payment_mode = models.CharField(max_length=100)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     membership = models.ForeignKey(Membership, null=True, blank=True, on_delete=models.SET_NULL)  # Added for Stripe
+    payment_description = models.TextField(null=True, blank=True)
 
 class CreditHistory(TimeStampModel):
     id = models.BigAutoField(primary_key=True)

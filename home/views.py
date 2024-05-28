@@ -2782,8 +2782,9 @@ class CheckoutView(APIView):
                     'quantity': 1,
                 }],
                 mode='payment',
-                success_url=settings.YOUR_DOMAIN + '/payment/success/',
-                cancel_url=settings.YOUR_DOMAIN + '/payment/failed/',
+                success_url=settings.FRONTEND_DOMAIN + '/payment/success/',
+                cancel_url=settings.FRONTEND_DOMAIN + '/payment/failed/',
+                expires_at=int((timezone.now() + timedelta(minutes=30)).timestamp()),  # Expires in 10 minutes
                 metadata={
                     'user_id': user.id,
                     'membership_id': membership_id if membership_id else '',
@@ -2880,6 +2881,7 @@ class StripeWebhookView(View):
             print(session)
             payment_record = PaymentRecord.objects.get(payment_id=session['id'])
             payment_record.payment_status = 'Paid'
+            payment_record.payment_description = "Payment Successful"
             payment_record.save()
 
             user = payment_record.user
@@ -2940,6 +2942,24 @@ class StripeWebhookView(View):
             session = event['data']['object']
             payment_record = PaymentRecord.objects.get(payment_id=session['id'])
             payment_record.payment_status = 'Failed'
+            payment_record.payment_description = "Session Expired"
+            payment_record.save()
+            user = payment_record.user
+            if not user.stripe_customer_id:
+                customer = stripe.Customer.create(
+                    email=user.email,
+                    name=user.get_full_name(),
+                )
+                user.stripe_customer_id = customer.id
+                user.save()
+
+        elif event['type'] == 'payment_intent.payment_failed':
+            payment_intent = event['data']['object']
+            error_message = payment_intent.get('last_payment_error', {}).get('message')
+            # Handle the payment failure event here, you can log the error message or take appropriate action
+            payment_record = PaymentRecord.objects.get(payment_id=session['id'])
+            payment_record.payment_status = 'Failed'
+            payment_record.payment_description = error_message
             payment_record.save()
             user = payment_record.user
             if not user.stripe_customer_id:
