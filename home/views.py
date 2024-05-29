@@ -144,7 +144,7 @@ class UserEmailVerificationView(APIView):
                     return Response({'token':token,'verified' : user.is_user_verified, 'Message':'Email verified successfully.', "membership_id":None, "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
                 # return Response({'token':token,'Message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
             else:
-                return Response({'Message': 'Verification code is incorrect. Resent verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'Message': 'Entered Verification code is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
         except CustomUser.DoesNotExist:
             # If email is not in records, prompt user to register first
             return Response({'Message': 'Email not in records. Please register first.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -2733,8 +2733,8 @@ class CheckoutView(APIView):
             if user.stripe_customer_id:
                 try:
                     customer = stripe.Customer.retrieve(user.stripe_customer_id)
-                    subscriptions = stripe.Subscription.list(customer=user.stripe_customer_id)
-                    if subscriptions:
+                    subscriptions = stripe.Subscription.list(customer=user.stripe_customer_id, status='active')
+                    if subscriptions.data:
                         # User is subscribed, redirect to subscription management page
                         return redirect('subscription_management')
                     else:
@@ -2776,6 +2776,41 @@ class CheckoutView(APIView):
             total_amount = membership.price
             item_name = membership.name
             total_credits = membership.credits
+
+            try:
+                if not user.stripe_customer_id:
+                    # Create a new Stripe customer if not exists
+                    customer = stripe.Customer.create(email=user.email, name=user.get_full_name())
+                    user.stripe_customer_id = customer.id
+                    user.save()
+                else:
+                    customer = stripe.Customer.retrieve(user.stripe_customer_id)
+
+                # Create a subscription
+                subscription = stripe.Subscription.create(
+                    customer=user.stripe_customer_id,
+                    items=[{'price': membership.stripe_price_id}],
+                    expand=['latest_invoice.payment_intent']
+                )
+
+                PaymentRecord.objects.create(
+                    total_amount=total_amount,
+                    total_credits=total_credits,
+                    payment_id=subscription['id'],
+                    payment_mode='Stripe',
+                    user=user,
+                    payment_status='Pending',
+                    membership=membership,
+                    date_time=timezone.now() 
+                )
+
+                return Response({'subscriptionId': subscription['id']})
+
+            except stripe.error.CardError as e:
+                return Response({'error': str(e)}, status=400)
+
+
+
         else:
             credit_price = CreditPricing.objects.first().price
             total_amount = total_credits * credit_price
@@ -2921,6 +2956,38 @@ class StripeWebhookView(View):
                 user.stripe_customer_id = customer.id
                 user.save()
 
+        elif event['type'] == 'invoice.payment_succeeded':
+            invoice = event['data']['object']
+            subscription_id = invoice['subscription']
+            payment_record = PaymentRecord.objects.get(payment_id=subscription_id)
+            payment_record.payment_status = 'Paid'
+            payment_record.payment_description = "Subscription Payment Successful"
+            payment_record.save()
+
+            user = payment_record.user
+            user.membership_expiry = timezone.now() + timedelta(days=payment_record.membership.duration_days)
+            user.credit += payment_record.total_credits
+            user.save()
+
+            CreditHistory.objects.create(
+                user=user,
+                total_credits_deducted=payment_record.total_credits,
+                type_of_transaction="Credit Addition",
+                date_time=timezone.now(),
+                payment_id=payment_record.payment_id,
+                description=f"Subscription payment credited {payment_record.total_credits} to the user {user.email}",
+                credit_balance_left=user.credit
+            )
+
+        elif event['type'] == 'invoice.payment_failed':
+            invoice = event['data']['object']
+            subscription_id = invoice['subscription']
+            payment_record = PaymentRecord.objects.get(payment_id=subscription_id)
+            payment_record.payment_status = 'Failed'
+            payment_record.payment_description = "Subscription Payment Failed"
+            payment_record.save()
+
+
         elif event['type'] == 'payment_intent.payment_failed':
             payment_intent = event['data']['object']
             error_message = payment_intent.get('last_payment_error', {}).get('message')
@@ -3059,7 +3126,7 @@ class AdminUpdateMembership(APIView):
             msg = 'could not found the membership_id'
             return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
         
-        if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits', 'Membership Feature 1', 'Membership Feature 2', 'Membership Feature 3', 'Membership Feature 4', 'Membership Feature 5']):
+        if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits', 'stripe_price_id', 'Membership Feature 1', 'Membership Feature 2', 'Membership Feature 3', 'Membership Feature 4', 'Membership Feature 5']):
             msg = 'No details given to update in Membership.'
             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
             

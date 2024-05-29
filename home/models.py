@@ -60,6 +60,7 @@ class Membership(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)           # Added for Stripe
     duration_days = models.IntegerField()               # Added for Stripe
     credits = models.IntegerField()               # Added for Stripe
+    stripe_price_id = models.CharField(max_length=100, null=True, blank=True)  # Added this field for Monthly Subscription ---> Value will be taken from Stripe Product
     membership_feature_1 = models.CharField(max_length=100, null=True, blank=True) 
     membership_feature_2 = models.CharField(max_length=100, null=True, blank=True) 
     membership_feature_3 = models.CharField(max_length=100, null=True, blank=True) 
