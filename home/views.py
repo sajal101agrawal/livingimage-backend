@@ -2661,7 +2661,7 @@ class GetPaymentHistory(APIView):
         user = CustomUser.objects.filter(id=user_id).first()
         if not user:
             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
-        payments = PaymentRecord.objects.filter(user=user)
+        payments = PaymentRecord.objects.filter(user=user).order_by('-date_time')
         if payments:
             serializer = PaymentRecordSerializer(payments, many=True)
             # return Response(serializer.data)
@@ -2690,7 +2690,7 @@ class GetCreditHistoryAPIView(APIView):
         if not user:
             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
         try:       
-            credit_history = CreditHistory.objects.filter(user=user)
+            credit_history = CreditHistory.objects.filter(user=user).order_by('-date_time')
             serializer = CreditHistorySerializer(credit_history, many=True)
             return Response({'Message': 'Credit History fetched successfully', "Credits":serializer.data}, status=status.HTTP_200_OK)
         
@@ -3157,7 +3157,7 @@ class get_credit_detail(APIView):
         try:
             transaction_type = request.data.get("transaction_type")
 
-            credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user, date_time__gte=start_date,  date_time__lte=end_date)
+            credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user, date_time__gte=start_date,  date_time__lte=end_date).order_by('-date_time')
             # credit_detail = CreditHistory.objects.filter(type_of_transaction=transaction_type, user=user)
 
 
