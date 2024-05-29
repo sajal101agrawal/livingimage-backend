@@ -14,7 +14,7 @@ urlpatterns = [
     path('api/dashboard/',DashboardView.as_view(), name="dashboard"), # For admin
 
     path('api/credit-pricing/', CreditPricingAPIView.as_view(), name='credit_pricing'), #CREDIT
-    path('api/record-payment/', RecordPaymentAPIView.as_view()), #PAYMENT
+    # path('api/record-payment/', RecordPaymentAPIView.as_view()), #PAYMENT
     # path('api/get-payment-history/', GetPaymentHistoryAPIView.as_view()), #PAYMENT
     # path('api/get-credit-history/', GetCreditHistoryAPIView.as_view()), #PAYMENT
 

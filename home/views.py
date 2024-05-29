@@ -2574,20 +2574,20 @@ class GetCreditBalance(APIView):
             credit_balance = user.credit
             return Response({'Message': 'Credit balance fetched successfully', "Credits":credit_balance})
         except Exception as e:
-            return Response({'Message':str(e)})
+            return Response({'Message':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 # -------------------------------------------------View Credit Balance API ----------------------------------------------------
 
 class CreditPricingAPIView(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
 
-    def get(self, request, format=None):
-        user_id = get_user_id_from_token(request)
-        user = CustomUser.objects.filter(id=user_id).first()
+    def get(self,request):
+        # user_id = get_user_id_from_token(request)
+        # user = CustomUser.objects.filter(id=user_id).first()
         # user_id = get_user_id_from_token(request)
         # user, _ = IsSuperUser(user_id)
-        if not user:
-            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+        # if not user:
+        #     return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
         
         credit_pricing = CreditPricing.objects.first()
         if not credit_pricing:
@@ -2597,7 +2597,8 @@ class CreditPricingAPIView(APIView):
         #return Response(serializer.data )
         data = serializer.data
         data['Currency'] = 'USD'  # Add Currency to the response data
-        return Response(data)
+        # return Response(data)
+        return Response({'Message': 'Credit pricing fetched successfully',"Credit Pricing":data}, status=status.HTTP_200_OK)
 
 class UpdateCreditPricingAPIView(APIView):
     renderer_classes = [UserRenderer]
@@ -2618,7 +2619,7 @@ class UpdateCreditPricingAPIView(APIView):
             if price is not None:
                 credit_pricing.price = price
                 credit_pricing.save()
-                return Response({'Message': 'Credit pricing updated successfully'})
+                return Response({'Message': 'Credit pricing updated successfully'}, status=status.HTTP_200_OK)
             else:
                 return Response({'Message': 'No pricing update available'}, status=status.HTTP_400_BAD_REQUEST)
             # if not credit_pricing:
@@ -2640,16 +2641,16 @@ class UpdateCreditPricingAPIView(APIView):
 from .models import PaymentRecord, CreditHistory
 from .serializers import PaymentRecordSerializer, CreditHistorySerializer
 
-class RecordPaymentAPIView(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
+# class RecordPaymentAPIView(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
 
-    def post(self, request, format=None):
-        serializer = PaymentRecordSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     def post(self, request, format=None):
+#         serializer = PaymentRecordSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GetPaymentHistory(APIView):
     renderer_classes = [UserRenderer]
@@ -2666,16 +2667,16 @@ class GetPaymentHistory(APIView):
             # return Response(serializer.data)
             return Response({"Message":"Payment History fetched Succesfully","Payment_History":serializer.data}, status=status.HTTP_200_OK)
         else:
-            return Response({"Message":"No Payment History Found","Payment_History":None}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"Message":"No Payment History Found","Payment_History":None}, status=status.HTTP_400_BAD_REQUEST)
             
-class GetCreditHistoryAPIView(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
+# class GetCreditHistoryAPIView(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request, format=None):
-        credit_history = CreditHistory.objects.all()
-        serializer = CreditHistorySerializer(credit_history, many=True)
-        return Response(serializer.data)
+#     def get(self, request, format=None):
+#         credit_history = CreditHistory.objects.all()
+#         serializer = CreditHistorySerializer(credit_history, many=True)
+#         return Response(serializer.data)
     
 class GetCreditHistoryAPIView(APIView):
     renderer_classes = [UserRenderer]
@@ -2691,10 +2692,10 @@ class GetCreditHistoryAPIView(APIView):
         try:       
             credit_history = CreditHistory.objects.filter(user=user)
             serializer = CreditHistorySerializer(credit_history, many=True)
-            return Response({'Message': 'Credit History fetched successfully', "Credits":serializer.data})
+            return Response({'Message': 'Credit History fetched successfully', "Credits":serializer.data}, status=status.HTTP_200_OK)
         
         except Exception as e:
-            return Response({'Message': f'Credit History fetched Unsuccessful, {str(e)}'})
+            return Response({'Message': f'Credit History fetched Unsuccessful, {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # try:
         #     credit_balance = user.credit
@@ -3032,9 +3033,9 @@ class get_membership(APIView):
 
                 lst.append(mem)
 
-            return Response({"Message":"Membership Details fetched Succesfully","Membership_details":lst})
+            return Response({"Message":"Membership Details fetched Succesfully","Membership_details":lst}, status=status.HTTP_200_OK)
         else:
-            return Response({"Message":"No Membership Details Found","Membership_details":None})
+            return Response({"Message":"No Membership Details Found","Membership_details":None}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 from dateutil.relativedelta import relativedelta   
