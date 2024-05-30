@@ -81,7 +81,11 @@ urlpatterns = [
 
     path('api/get_latest_payment/', UserPaymentLatest.as_view(), name='UserPaymentLatest'), 
 
-    path('api/cancel_membership/', CancelMembershipView.as_view(), name='CancelMembershipView'), 
+    path('api/cancel_membership/', CancelSubscriptionView.as_view(), name='CancelMembershipView'), 
+
+    path('api/update_membership/', UpdateSubscriptionView.as_view(), name='update_subscription'), 
+
+    path('api/change_card_detail/', ChangeCardDetailView.as_view(), name='ChangeCardDetailView'), 
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
