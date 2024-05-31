@@ -1102,86 +1102,93 @@ class ViewUser(APIView):
             "Total Credits" :user_.credit,
             "Registered on" :user_.created.strftime("%d/%m/%Y %H:%M:%S"),
             "Verification Status" :user_.is_user_verified,
+            "Stripe Customer ID": user_.stripe_customer_id,
+            "Membership Name" : str(user_.membership) if user_.membership else None,
+            "Membership ID" : user_.membership.id if user_.membership else None,
+            "Membership Expiry" : user_.membership_expiry.strftime("%d/%m/%Y %H:%M:%S") if user_.membership_expiry else None,
         }
 
-    
-
         # Payment Table
-        payment = PaymentRecord.objects.filter(user=user_).first()
+        payments = PaymentRecord.objects.filter(user=user_).order_by('-date_time')
+        pay_lst=[]
 
-        if payment:
-            payment_tmp={
-                "Payment ID" :payment.id,
-                "User Email" :payment.user.email,
-                "Payment Amount" :str(payment.total_amount),
-                "Total Credits" :payment.total_credits,
-                "Payment date time" :payment.date_time.strftime("%d/%m/%Y %H:%M:%S"),
-                "Payment Status" :payment.payment_status,
-                "Payment Gateway ID" :payment.payment_id,
-                "Payment Mode" :payment.payment_mode,
-                }
+        if payments:
+            for payment in payments:
+                payment_tmp={
+                    "Payment ID" :payment.id,
+                    "User Email" :payment.user.email,
+                    "Payment Amount" :str(payment.total_amount),
+                    "Total Credits" :payment.total_credits,
+                    "Payment date time" :payment.date_time.strftime("%d/%m/%Y %H:%M:%S"),
+                    "Payment Status" :payment.payment_status,
+                    "Payment Gateway ID" :payment.payment_id,
+                    "Payment Mode" :payment.payment_mode,
+                    }
+                pay_lst.append(payment_tmp)
 
-        else:
-            payment_tmp = {}
 
         # Credit Table
-        credit = CreditHistory.objects.filter(user=user_).first()
-        if credit:
-            credit_tmp={
-                "credit ID" :credit.id,
-                "User Email" :credit.user.email,
-                "Total Credits Deducted" :credit.total_credits_deducted,
-                "Transaction Type" :credit.type_of_transaction,
-                "Transaction Date Time" :credit.created.strftime("%d/%m/%Y %H:%M:%S"),
-                "Payment ID" :credit.payment_id,
-                "Description" :credit.description,
-                }
+        credit_ = CreditHistory.objects.filter(user=user_).order_by('-date_time')
+        cred_lst=[]
 
-        credit_tmp={}
+        if credit_:
+            for credit in credit_:
+                credit_tmp={
+                    "credit ID" :credit.id,
+                    "User Email" :credit.user.email,
+                    "Total Credits Deducted" :credit.total_credits_deducted,
+                    "Transaction Type" :credit.type_of_transaction,
+                    "Transaction Date Time" :credit.created.strftime("%d/%m/%Y %H:%M:%S"),
+                    "Payment ID" :credit.payment_id,
+                    "Description" :credit.description,
+                    }
+                cred_lst.append(credit_tmp)
+
 
         # Original Image Table
-        img = Image.objects.filter(user=user_).first()
-        if img:
-
-            One_Original_Image = {
-                    'original_image_id' : img.id,
-                    'user' : img.user.email,
-                    'original_image_name' : img.image_name,
-                    'original_image': str(img.photo),
-                    'public' : img.public,
-                    'prompt' : img.prompt,
-                    'created': img.created.strftime("%d/%m/%Y %H:%M:%S"),
-                    'regenerated_at': img.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if img.regenerated_at else None,
-                    'next_regeneration_at': img.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
-                }
-        else:
-            One_Original_Image={}
+        imgs = Image.objects.filter(user=user_).order_by('-updated')
+        img_lst=[]
+        if imgs:
+            for img in imgs:
+                One_Original_Image = {
+                        'original_image_id' : img.id,
+                        'user' : img.user.email,
+                        'original_image_name' : img.image_name,
+                        'original_image': str(img.photo),
+                        'public' : img.public,
+                        'prompt' : img.prompt,
+                        'created': img.created.strftime("%d/%m/%Y %H:%M:%S"),
+                        'regenerated_at': img.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if img.regenerated_at else None,
+                        'next_regeneration_at': img.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
+                    }
+                img_lst.append(One_Original_Image)
 
 
         # Regenerated Image Table
-        regen_img = RegeneratedImage.objects.filter(user=user_).first()
-
-        if regen_img:
-            One_Regen_Image = {
-                    'regenerated_image_id' : regen_img.id,
-                    'user' : regen_img.user.email,
-                    'regenerated_image' : str(regen_img.regenerated_image),
-                    'original_image_id' : regen_img.original_image_id,
-                    'original_image_name' : regen_img.original_image_name,
-                    'public' : regen_img.public,
-                    'created': regen_img.created.strftime("%d/%m/%Y %H:%M:%S"),
-                    'regenerated_at': regen_img.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if regen_img.regenerated_at else None,
-                    'next_regeneration_at': regen_img.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
-                }
-        else:
-            One_Regen_Image={}
+        regen_imgs = RegeneratedImage.objects.filter(user=user_).order_by('-updated')
+        regen_imgs_lst=[]
+        if regen_imgs:
+            for regen_img in regen_imgs:
+                One_Regen_Image = {
+                        'regenerated_image_id' : regen_img.id,
+                        'user' : regen_img.user.email,
+                        'regenerated_image' : str(regen_img.regenerated_image),
+                        'original_image_id' : regen_img.original_image_id,
+                        'original_image_name' : regen_img.original_image_name,
+                        'public' : regen_img.public,
+                        'created': regen_img.created.strftime("%d/%m/%Y %H:%M:%S"),
+                        'regenerated_at': regen_img.regenerated_at.strftime("%d/%m/%Y %H:%M:%S") if regen_img.regenerated_at else None,
+                        'next_regeneration_at': regen_img.nextregeneration_at.strftime("%d/%m/%Y %H:%M:%S"),
+                    }
+                regen_imgs_lst.append(One_Regen_Image)
+        
 
         jsonn_response = {
             'user_data' : users_tmp,
-            'Original_Image_data' : One_Original_Image,
-            'Regenerated_Image_data' : One_Regen_Image,
-            'Credit_data' : credit_tmp,
-            'Payment_data' : payment_tmp,
+            'Original_Image_data' : img_lst,
+            'Regenerated_Image_data' : regen_imgs_lst,
+            'Credit_data' : cred_lst,
+            'Payment_data' : pay_lst,
         }
         response = Response(jsonn_response, status=status.HTTP_200_OK)
         
