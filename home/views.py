@@ -3728,73 +3728,73 @@ class UserPaymentLatest(APIView):
 
 
 
-class UpgradeSubscriptionView(APIView):
-    permission_classes = [IsAuthenticated]
+# class UpgradeSubscriptionView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        user_id = get_user_id_from_token(request)
-        user = CustomUser.objects.filter(id=user_id).first()
-        if not user:
-            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+#     def post(self, request):
+#         user_id = get_user_id_from_token(request)
+#         user = CustomUser.objects.filter(id=user_id).first()
+#         if not user:
+#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        new_membership_id = request.data.get('new_membership_id')
-        if not new_membership_id:
-            return Response({"Message": "New membership ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+#         new_membership_id = request.data.get('new_membership_id')
+#         if not new_membership_id:
+#             return Response({"Message": "New membership ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        new_membership = Membership.objects.get(id=new_membership_id)
-        current_subscription_id = stripe.Subscription.list(customer=user.stripe_customer_id, status='active').data[0].id
+#         new_membership = Membership.objects.get(id=new_membership_id)
+#         current_subscription_id = stripe.Subscription.list(customer=user.stripe_customer_id, status='active').data[0].id
 
-        try:
-            updated_subscription = stripe.Subscription.modify(
-                current_subscription_id,
-                cancel_at_period_end=False,
-                proration_behavior='create_prorations',
-                items=[{
-                    'id': stripe.Subscription.retrieve(current_subscription_id).items.data[0].id,
-                    'price': new_membership.stripe_price_id,
-                }]
-            )
-            user.membership = new_membership
-            user.save()
+#         try:
+#             updated_subscription = stripe.Subscription.modify(
+#                 current_subscription_id,
+#                 cancel_at_period_end=False,
+#                 proration_behavior='create_prorations',
+#                 items=[{
+#                     'id': stripe.Subscription.retrieve(current_subscription_id).items.data[0].id,
+#                     'price': new_membership.stripe_price_id,
+#                 }]
+#             )
+#             user.membership = new_membership
+#             user.save()
 
-            return Response({'subscriptionId': updated_subscription.id})
+#             return Response({'subscriptionId': updated_subscription.id})
 
-        except stripe.error.StripeError as e:
-            return Response({'error': str(e)}, status=400)
+#         except stripe.error.StripeError as e:
+#             return Response({'error': str(e)}, status=400)
 
-class DowngradeSubscriptionView(APIView):
-    permission_classes = [IsAuthenticated]
+# class DowngradeSubscriptionView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        user_id = get_user_id_from_token(request)
-        user = CustomUser.objects.filter(id=user_id).first()
-        if not user:
-            return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+#     def post(self, request):
+#         user_id = get_user_id_from_token(request)
+#         user = CustomUser.objects.filter(id=user_id).first()
+#         if not user:
+#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        new_membership_id = request.data.get('new_membership_id')
-        if not new_membership_id:
-            return Response({"Message": "New membership ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+#         new_membership_id = request.data.get('new_membership_id')
+#         if not new_membership_id:
+#             return Response({"Message": "New membership ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        new_membership = Membership.objects.get(id=new_membership_id)
-        current_subscription_id = stripe.Subscription.list(customer=user.stripe_customer_id, status='active').data[0].id
+#         new_membership = Membership.objects.get(id=new_membership_id)
+#         current_subscription_id = stripe.Subscription.list(customer=user.stripe_customer_id, status='active').data[0].id
 
-        try:
-            updated_subscription = stripe.Subscription.modify(
-                current_subscription_id,
-                cancel_at_period_end=False,
-                proration_behavior='create_prorations',
-                items=[{
-                    'id': stripe.Subscription.retrieve(current_subscription_id).items.data[0].id,
-                    'price': new_membership.stripe_price_id,
-                }]
-            )
-            user.membership = new_membership
-            user.save()
+#         try:
+#             updated_subscription = stripe.Subscription.modify(
+#                 current_subscription_id,
+#                 cancel_at_period_end=False,
+#                 proration_behavior='create_prorations',
+#                 items=[{
+#                     'id': stripe.Subscription.retrieve(current_subscription_id).items.data[0].id,
+#                     'price': new_membership.stripe_price_id,
+#                 }]
+#             )
+#             user.membership = new_membership
+#             user.save()
 
-            return Response({'subscriptionId': updated_subscription.id})
+#             return Response({'subscriptionId': updated_subscription.id})
 
-        except stripe.error.StripeError as e:
-            return Response({'error': str(e)}, status=400)
+#         except stripe.error.StripeError as e:
+#             return Response({'error': str(e)}, status=400)
 
 # @csrf_exempt
 # def update_subscription(request):
@@ -3902,6 +3902,16 @@ class UpdateSubscriptionView(APIView):
                 subscription=subscription_id,
             )
 
+            new_mems = Membership.objects.get(stripe_price_id = new_price_id)
+            print(new_mems.id)
+            print(new_mems.name)
+
+            user.membership = new_mems
+            # user.membership.name = new_mems.name
+            if not user.membership_expiry:
+                user.membership_expiry = timezone.now() + timedelta(days = new_mems.duration_days)
+            user.is_subscribed =True
+            user.save()
             # return JsonResponse({
             #     'subscription': updated_subscription,
             #     'upcoming_invoice': upcoming_invoice,
@@ -3911,7 +3921,7 @@ class UpdateSubscriptionView(APIView):
                 'Message': "Subscription Updated Sucessfully"
             })
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return JsonResponse({'Message': f"Error Occured : {str(e)}"}, status=400)
 
 
 
@@ -3931,7 +3941,7 @@ class ChangeCardDetailView(APIView):
                 customer=customer_id,
                 return_url=settings.FRONTEND_DOMAIN + '/dashboard/',
             )
-            return JsonResponse({'url': session.url})
+            return JsonResponse({'Message': "Proceed with the url to change payment detail",'url': session.url})
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return JsonResponse({'Message': f"Error Occured : {str(e)}"}, status=400)
         # return JsonResponse({'error': 'Invalid request method'}, status=405)
