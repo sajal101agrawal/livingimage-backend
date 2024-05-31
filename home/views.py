@@ -55,7 +55,7 @@ def get_tokens_for_user(user):
     """
     refresh = RefreshToken.for_user(user)
     return {
-        'refresh': str(refresh),
+        # 'refresh': str(refresh),
         'access': str(refresh.access_token),
     }
       
@@ -1113,7 +1113,7 @@ class ViewUser(APIView):
             payment_tmp={
                 "Payment ID" :payment.id,
                 "User Email" :payment.user.email,
-                "Payment Amount" :payment.total_amount,
+                "Payment Amount" :str(payment.total_amount),
                 "Total Credits" :payment.total_credits,
                 "Payment date time" :payment.date_time.strftime("%d/%m/%Y %H:%M:%S"),
                 "Payment Status" :payment.payment_status,
@@ -3910,7 +3910,7 @@ class UpdateSubscriptionView(APIView):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-class ChangeCardDetailView(View):
+class ChangeCardDetailView(APIView):
     def post(self, request, *args, **kwargs):
         
         user_id = get_user_id_from_token(request)
