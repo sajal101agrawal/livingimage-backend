@@ -2813,16 +2813,16 @@ class CheckoutView(APIView):
                 #     expand=['latest_invoice.payment_intent']
                 # )
 
-                PaymentRecord.objects.create(
-                    total_amount=total_amount,
-                    total_credits=total_credits,
-                    payment_id="Temp",
-                    payment_mode='Stripe',
-                    user=user,
-                    payment_status='Pending',
-                    membership=membership,
-                    date_time=timezone.now() 
-                )
+                # PaymentRecord.objects.create(
+                #     total_amount=total_amount,
+                #     total_credits=total_credits,
+                #     payment_id="Temp",
+                #     payment_mode='Stripe',
+                #     user=user,
+                #     payment_status='Pending',
+                #     membership=membership,
+                #     date_time=timezone.now() 
+                # )
 
                 # return Response({'subscriptionId': "TEMP"})
 
@@ -2970,6 +2970,7 @@ class StripeWebhookView(View):
             )
         except (ValueError, stripe.error.SignatureVerificationError) as e:
             return HttpResponse(status=400)
+        print("The event details are as follows: ",event)
 
         if event['type'] == 'checkout.session.completed':
             session = event['data']['object']
@@ -3052,6 +3053,31 @@ class StripeWebhookView(View):
                 description=addition_description,
                 credit_balance_left=user.credit
                 )
+        
+        elif event['type'] == 'customer.subscription.created':
+            session = event['data']['object']
+            subscription = event['data']['object']
+            subscription_id = subscription['subscription']
+            payment_record = PaymentRecord.objects.get(payment_id=session['id'])
+            payment_record.payment_status = 'Paid'
+            payment_record.payment_description = "Subscription Created Successfully"
+            payment_record.payment_id = subscription_id
+            payment_record.save()
+
+            user = payment_record.user
+            if user:
+                user.is_subscribed = True
+                
+                # Assuming `membership` is a field that stores the plan ID or some subscription details
+                user.membership = subscription['plan']['id']
+                
+                # If you want to set an expiry date, you might need to calculate it based on the current period end
+                # For example, setting membership_expiry to the end of the current billing period
+                current_period_end = subscription['current_period_end']
+                user.membership_expiry = datetime.fromtimestamp(current_period_end)
+                
+                user.save()
+
 
 
         elif event['type'] == 'checkout.session.expired':
@@ -3103,7 +3129,14 @@ class StripeWebhookView(View):
 
         elif event['type'] == 'customer.subscription.deleted':
             subscription = event['data']['object']
-            user = CustomUser.objects.filter(stripe_customer_id=subscription['customer']).first()
+            
+            subscription_id = subscription['subscription']
+            payment_record = PaymentRecord.objects.get(payment_id=subscription_id)
+            payment_record.payment_status = 'Failed'
+            payment_record.payment_description = "Subscription Cancelled Successfully"
+            payment_record.save()
+
+            user = payment_record.user
             if user:
                 user.is_subscribed = False
                 user.membership_expiry = None
@@ -3127,6 +3160,25 @@ class StripeWebhookView(View):
                 )
                 user.stripe_customer_id = customer.id
                 user.save()
+
+        elif event['type'] == 'payment_intent.canceled':
+            print(" I am inside payment cancelled")
+            payment_intent = event['data']['object']
+            error_message = payment_intent.get('last_payment_error', {}).get('message')
+            # Handle the payment failure event here, you can log the error message or take appropriate action
+            payment_record = PaymentRecord.objects.get(payment_id=session['id'])
+            payment_record.payment_status = 'Failed'
+            payment_record.payment_description = error_message
+            payment_record.save()
+            user = payment_record.user
+            if not user.stripe_customer_id:
+                customer = stripe.Customer.create(
+                    email=user.email,
+                    name=user.get_full_name(),
+                )
+                user.stripe_customer_id = customer.id
+                user.save()
+
 
         return HttpResponse(status=200)
 
@@ -3175,297 +3227,6 @@ class SubscriptionManagementView(View):
         else:
             return redirect('login')
         
-
-# class CheckoutView(APIView):
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-#     def get(self, request):
-#         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         user.stripe_customer_id = "cus_QCAkUqZnP3u9Q7"
-#         user.save()
-#         if not user:
-#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
-        
-#         # user = request.user
-#         if user.is_authenticated:
-#             if user.stripe_customer_id:
-#                 try:
-#                     customer = stripe.Customer.retrieve(user.stripe_customer_id)
-#                     subscriptions = stripe.Subscription.list(customer=user.stripe_customer_id)
-#                     if subscriptions:
-#                         # User is subscribed, redirect to subscription management page
-#                         return redirect('subscription_management')
-#                     else:
-#                         # User is an existing customer but not subscribed, send to checkout page
-#                         return render(request, 'checkout.html', {
-#                             'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
-#                             'memberships': Membership.objects.all()
-#                         })
-#                 except stripe.error.InvalidRequestError as e:
-#                     # Stripe customer retrieval failed
-#                     # return redirect('create_stripe_customer')
-#                     return Response({"Message":f"Error Occured: {str(e)}"}, status=400)
-#             else:
-#                 # User is not an existing customer, proceed to create new customer account
-#                 return redirect('create_stripe_customer')
-#         else:
-#             # User is not authenticated, redirect to login page
-#             return redirect('login')
-        
-#     @method_decorator(csrf_exempt)
-#     def dispatch(self, *args, **kwargs):
-#         return super().dispatch(*args, **kwargs)
-
-#     def post(self, request):
-#         total_credits = request.data.get('total_credits', 0)
-#         membership_id = request.data.get('membership_id')
-
-#         print("The MEMBERSHIP ID IS GIVEN AS :",membership_id)
-#         print("The credits are GIVEN AS :",total_credits)
-
-#         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         if not user:
-#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         # user = request.user
-
-#         if membership_id:
-#             membership = Membership.objects.get(id=membership_id)
-#             total_amount = membership.price
-#             item_name = membership.name
-#             total_credits = membership.credits
-#             stripe_price_id = membership.stripe_price_id
-#         else:
-#             credit_price = CreditPricing.objects.first().price
-#             total_amount = total_credits * credit_price
-#             # total_amount = request.POST.get('total_amount')
-#             item_name = f'{total_credits} Credits'
-#             stripe_price_id = None
-
-#         try:
-#             line_items = [{
-#                 'price': stripe_price_id,
-#                 'quantity': 1,
-#             }] if stripe_price_id else [{
-#                 'price_data': {
-#                     'currency': 'usd',
-#                     'product_data': {
-#                         'name': item_name,
-#                     },
-#                     'unit_amount': int(float(total_amount) * 100),
-#                 },
-#                 'quantity': 1,
-#             }]
-#             checkout_session = stripe.checkout.Session.create(
-#                 payment_method_types=['card'],
-#                 # line_items=[{
-#                 #     'price_data': {
-#                 #         'currency': 'usd',
-#                 #         'product_data': {
-#                 #             'name': item_name,
-#                 #         },
-#                 #         'unit_amount': int(float(total_amount) * 100),
-#                 #     },
-#                 #     'quantity': 1,
-#                 # }],
-#                 line_items=line_items,
-#                 mode='payment',
-#                 success_url=settings.FRONTEND_DOMAIN + '/payment/success/',
-#                 cancel_url=settings.FRONTEND_DOMAIN + '/payment/failed/',
-#                 expires_at=int((timezone.now() + timedelta(minutes=30)).timestamp()),  # Expires in 10 minutes
-#                 metadata={
-#                     'user_id': user.id,
-#                     'membership_id': membership_id if membership_id else '',
-#                     'total_credits': total_credits,
-#                 }
-#             )
-
-#             PaymentRecord.objects.create(
-#                 total_amount=total_amount,
-#                 total_credits=total_credits,
-#                 payment_id=checkout_session['id'],
-#                 payment_mode='Stripe',
-#                 user=user,
-#                 payment_status='Pending',
-#                 membership=membership if membership_id else None,
-#                 date_time=timezone.now() 
-#             )
-
-#             return Response({'sessionId': checkout_session['id']})
-
-#         except stripe.error.CardError as e:
-#             return Response({'error': str(e)}, status=400)
-
-# class PaymentSuccessView(TemplateView):
-#     template_name = 'payment_success.html'
-
-# class PaymentFailedView(TemplateView):
-#     template_name = 'payment_failed.html'
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class StripeWebhookView(View):
-#     def post(self, request):
-#         payload = request.body
-#         sig_header = request.headers.get('Stripe-Signature')
-#         print("sig_header :",sig_header)
-#         print("The Paylaod is: ",payload)
-#         print("The settings.STRIPE_WEBHOOK_SECRET: ",settings.STRIPE_WEBHOOK_SECRET)
-
-#         try:
-#             event = stripe.Webhook.construct_event(
-#                 payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-#             )
-#         except (ValueError, stripe.error.SignatureVerificationError) as e:
-#             return HttpResponse(status=400)
-
-#         if event['type'] == 'checkout.session.completed':
-#             session = event['data']['object']
-#             print(session)
-#             payment_record = PaymentRecord.objects.get(payment_id=session['id'])
-#             payment_record.payment_status = 'Paid'
-#             payment_record.payment_description = "Payment Successful"
-#             payment_record.save()
-
-#             user = payment_record.user
-#             if not user.stripe_customer_id:
-#                 customer = stripe.Customer.create(
-#                     email=user.email,
-#                     name=user.get_full_name(),
-#                 )
-#                 user.stripe_customer_id = customer.id
-#                 user.save()
-#                 # return redirect('create_stripe_customer')
-
-#             if payment_record.membership:
-#                 user = payment_record.user
-#                 user.membership = payment_record.membership
-#                 user.membership_expiry = timezone.now() + timedelta(days=payment_record.membership.duration_days)
-#                 user.credit = user.credit + payment_record.total_credits
-#                 user.is_subscribed=True
-#                 user.save()
-
-#                 addition_description =f"Added {payment_record.total_credits} credit to the user {user.email} via stripe"
-
-#                 # HERE CREDITHISTORY RECORD SHOULD ALSO BE CREATED
-#                 CreditHistory.objects.create(
-#                 user=user,
-#                 total_credits_deducted=payment_record.total_credits,
-#                 type_of_transaction="Credit Addition",
-#                 date_time=datetime.now(pytz.utc),
-#                 payment_id=payment_record.payment_id,  # You can leave this blank for credit deductions
-#                 description=addition_description,
-#                 credit_balance_left=user.credit
-#                 )
-
-
-
-#             else:
-#                 user = payment_record.user
-#                 # user.membership = payment_record.membership
-#                 # user.membership_expiry = timezone.now() + timedelta(days=payment_record.membership.duration_days)
-#                 user.credit = user.credit + payment_record.total_credits
-#                 user.save()
-
-#                 addition_description =f"Added {payment_record.total_credits} credit to the user {user.email} via stripe"
-
-#                 # HERE CREDITHISTORY RECORD SHOULD ALSO BE CREATED
-#                 CreditHistory.objects.create(
-#                 user=user,
-#                 total_credits_deducted=payment_record.total_credits,
-#                 type_of_transaction="Credit Addition",
-#                 date_time=datetime.now(pytz.utc),
-#                 payment_id=payment_record.payment_id,  # You can leave this blank for credit deductions
-#                 description=addition_description,
-#                 credit_balance_left=user.credit
-#                 )
-
-#         # Handle test clock events
-#         elif event['type'] == 'test_helpers.test_clock.advancing':
-#             test_clock = event['data']['object']
-#             print(f"Test clock advancing: {test_clock}")
-
-
-#         elif event['type'] == 'checkout.session.expired':
-#             session = event['data']['object']
-#             payment_record = PaymentRecord.objects.get(payment_id=session['id'])
-#             payment_record.payment_status = 'Failed'
-#             payment_record.payment_description = "Session Expired"
-#             payment_record.save()
-#             user = payment_record.user
-#             if not user.stripe_customer_id:
-#                 customer = stripe.Customer.create(
-#                     email=user.email,
-#                     name=user.get_full_name(),
-#                 )
-#                 user.stripe_customer_id = customer.id
-#                 user.save()
-
-#         elif event['type'] == 'payment_intent.payment_failed':
-#             payment_intent = event['data']['object']
-#             error_message = payment_intent.get('last_payment_error', {}).get('message')
-#             # Handle the payment failure event here, you can log the error message or take appropriate action
-#             payment_record = PaymentRecord.objects.get(payment_id=session['id'])
-#             payment_record.payment_status = 'Failed'
-#             payment_record.payment_description = error_message
-#             payment_record.save()
-#             user = payment_record.user
-#             if not user.stripe_customer_id:
-#                 customer = stripe.Customer.create(
-#                     email=user.email,
-#                     name=user.get_full_name(),
-#                 )
-#                 user.stripe_customer_id = customer.id
-#                 user.save()
-
-#         return HttpResponse(status=200)
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class CreateStripeCustomerView(View):
-#     def get(self, request):
-
-#         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         if not user:
-#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         # user = request.user
-#         if user.is_authenticated:
-#             try:
-#                 customer = stripe.Customer.create(
-#                     email=user.email,
-#                     name=user.get_full_name(),
-#                 )
-#                 user.stripe_customer_id = customer.id
-#                 user.save()
-#                 return redirect('checkout')
-#             except Exception as e:
-#                 return HttpResponse(f"Error creating Stripe customer: {e}", status=400)
-#         else:
-#             return redirect('login')
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class SubscriptionManagementView(View):
-#     def get(self, request):
-
-#         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         if not user:
-#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         # user = request.user
-#         if user.is_authenticated:
-#             try:
-#                 subscriptions = stripe.Subscription.list(customer=user.stripe_customer_id)
-#                 return render(request, 'subscription_management.html', {
-#                     'subscriptions': subscriptions
-#                 })
-#             except Exception as e:
-#                 return HttpResponse(f"Error retrieving subscriptions: {e}", status=400)
-#         else:
-#             return redirect('login')
-    
 
     
 
