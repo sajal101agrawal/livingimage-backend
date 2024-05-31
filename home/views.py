@@ -963,16 +963,16 @@ class GetAllPayments(APIView):
             msg = 'could not found the super user'
             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
         
-        all_payment = PaymentRecord.objects.all()
+        all_payment = PaymentRecord.objects.all().order_by("-date_time")
 
         payment_list=[]
         for payment in all_payment:
             payment_tmp={
             "Payment ID" :payment.id,
             "User Email" :payment.user.email,
-            "Payment Amount" :payment.total_amount,
+            "Payment Amount" :str(payment.total_amount),
             "Total Credits" :payment.total_credits,
-            "Payment time" :payment.date_time,
+            "Payment time" :payment.date_time.strftime("%d/%m/%Y %H:%M:%S"),
             "Payment Status" :payment.payment_status,
             "Payment Gateway ID" :payment.payment_id,
             "Payment Mode" :payment.payment_mode,
@@ -1499,12 +1499,65 @@ class AdminAnalytics(APIView):
             msg = 'could not found the super user'
             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
         
+        if not "date_filter" in request.data or not request.data.get("date_filter"):
+            return Response({"Message":"Please specify the date_filter eg: day, week, month, year or custom"})
+
+        # # type_of_transaction="Credit Addition",Credit Deduction
+        date_filter = request.data.get("date_filter")
+
+        if date_filter:
+            if date_filter == "custom":
+                if not "start_date" in request.data or not request.data.get("start_date"):
+                    return Response({"Message":"Please specify the start_date eg: 20-04-2020"})
+                if not "end_date" in request.data or not request.data.get("end_date"):
+                    return Response({"Message":"Please specify the end_date eg: 20-10-2020"})
+                # start_date=request.data.get("start_date").strftime("%d/%m/%Y %H:%M:%S")
+                # end_date=request.data.get("end_date").strftime("%d/%m/%Y %H:%M:%S")
+
+                try:
+                    start_date = datetime.strptime(request.data.get("start_date"), "%d-%m-%Y")
+                    end_date = datetime.strptime(request.data.get("end_date"), "%d-%m-%Y")
+                except ValueError:
+                    return Response({"Message":"Date format should be DD-MM-YYYY"})
+            else:
+                if not "frequency" in request.data or not request.data.get("frequency"):
+                    return Response({"Message":"Please specify the frequency eg: 1,2 ..."})
+                frequency = request.data.get("frequency")
+
+
+
+
+        #periods = request.data.get("periods")
+        now=datetime.now(pytz.utc)
+
+        if date_filter == 'month' or date_filter == 'week' or date_filter == 'year' or date_filter == 'day':
+            if date_filter == 'week':
+                end_date = now
+                start_date = now - timedelta(weeks=frequency)
+            elif date_filter == 'month':
+                end_date = now
+                start_date = now - relativedelta(months=frequency)
+            elif date_filter == 'year':
+                end_date = now
+                start_date = now - relativedelta(years=frequency)
+            elif date_filter == 'day':
+                end_date = now
+                start_date = now - timedelta(days=frequency)
+        else:
+            start_date=start_date
+            end_date=end_date
+
+        
+
+# , updated__gte=start_date,  updated__lte=end_date).order_by('-date_time')
+
+
         # User Table
-        user_ = CustomUser.objects.all()
+        user_ = CustomUser.objects.filter(created__gte=start_date,  created__lte=end_date).order_by('-created')
         total_user = len(user_)
 
         # Payment Table
-        payment = PaymentRecord.objects.all()
+        payment = PaymentRecord.objects.filter(date_time__gte=start_date,  date_time__lte=end_date).order_by('-date_time')
         total_payment_count = len(payment)
 
         tot_pay=0
@@ -1514,26 +1567,29 @@ class AdminAnalytics(APIView):
         
 
         # Credit Table
-        # credit = CreditHistory.objects.all()
-        # if credit:
-        #     credit_tmp={
-        #         "credit ID" :credit.id,
-        #         "User Email" :credit.user.email,
-        #         "Total Credits" :credit.total_credits,
-        #         "Transaction Type" :credit.type_of_transaction,
-        #         "Transaction Date" :credit.created.strftime("%d/%m/%Y"),
-        #         "Payment ID" :credit.payment_id,
-        #         "Description" :credit.description,
-        #         }
+        tot_cred_add = 0
+        tot_cred_deduct = 0
+        credit_mod = CreditHistory.objects.filter(date_time__gte=start_date,  date_time__lte=end_date)
+        total_credit_records = len(credit_mod)
+        credit_add = CreditHistory.objects.filter(date_time__gte=start_date,  date_time__lte=end_date , type_of_transaction = "Credit Addition").order_by('-date_time')
+        credit_deduct = CreditHistory.objects.filter(date_time__gte=start_date,  date_time__lte=end_date , type_of_transaction = "Credit Deduction").order_by('-date_time')
 
-        # credit_tmp={}
+        if credit_add:
+            for adds in credit_add:
+                tot_cred_add = tot_cred_add + adds.total_credits_deducted
+
+        if credit_deduct:
+            for deducts in credit_deduct:
+                tot_cred_deduct = tot_cred_deduct + deducts.total_credits_deducted
+
+
 
         # Original Image Table
-        img = Image.objects.all()
+        img = Image.objects.filter(updated__gte=start_date,  updated__lte=end_date).order_by('-updated')
         total_original_image = len(img)
 
         # Regenerated Image Table
-        regen_img = RegeneratedImage.objects.all()
+        regen_img = RegeneratedImage.objects.filter(updated__gte=start_date,  updated__lte=end_date).order_by('-updated')
         total_regen_image = len(regen_img)
 
         jsonn_response = {
@@ -1541,7 +1597,10 @@ class AdminAnalytics(APIView):
             'Total Original Images' : total_original_image,
             'Total Regenerated Images' : total_regen_image,
             'Total Payments' : total_payment_count,
-            'Total Payment Amount' : tot_pay,
+            'Total Payment Amount' : str(tot_pay),
+            'Total Credit Records': total_credit_records,
+            'Total Credit Added': tot_cred_add,
+            'Total Credit Deducted': tot_cred_deduct,
         }
         response = Response(jsonn_response, status=status.HTTP_200_OK)
         
