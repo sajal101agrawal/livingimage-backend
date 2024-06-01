@@ -2,3 +2,8 @@ config.ini
 *.sqlite3
 */__pycache__
 # */migrations
+# Ignore Python cache directories
+**/__pycache__
+
+# Ignore Django migration files
+**/migrations/*.py
