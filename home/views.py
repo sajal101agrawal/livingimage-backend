@@ -201,9 +201,9 @@ class UserLoginView(APIView):
                 if user.membership:
                     Mem=Membership.objects.filter(name=user.membership.name).first()
                     memebership_id=Mem.id
-                    return Response({'token':token,'verified' : user.is_user_verified, 'admin' : is_superuser, 'Message':'Login Success', "membership_id":memebership_id, "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                    return Response({'token':token,'verified' : user.is_user_verified, "user name":user.name, 'admin' : is_superuser, 'Message':'Login Success', "membership_id":memebership_id, "membership":user.membership.name, "membership_expiry_date":str(user.membership_expiry), "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
                 else:
-                    return Response({'token':token,'verified' : user.is_user_verified, 'admin' : is_superuser, 'Message':'Login Success', "membership_id":None, "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
+                    return Response({'token':token,'verified' : user.is_user_verified, "user name":user.name, 'admin' : is_superuser, 'Message':'Login Success', "membership_id":None, "membership":None, "membership_expiry_date":None, "subscription_status":user.is_subscribed, "stripe_customer_id":user.stripe_customer_id}, status=status.HTTP_200_OK)
 
             else:
 #--------------------------If user is not verified then OTP is sent to user-----------------------------------------------------------
@@ -1233,14 +1233,21 @@ class AdminUpdateUser(APIView):
             return Response({'Message' : 'could not got the user'}, status=status.HTTP_204_NO_CONTENT)
 
         found_user = found_user.first()
+        print("The detail of found user is as follows",found_user)
+        print("The detail of found user name is as follows",found_user.name)
+
+        print("The detail of found user username is as follows",found_user.username)
+
         #field_name = request.data['feild']
         new_name = request.data['new_name']
+        print("The detail of new name is as follows",new_name)
         
         # if field_name != 'name':
         #     return Response({'Message' : 'Field name must be "name"'}, status=status.HTTP_400_BAD_REQUEST)
             
         try:
-            setattr(found_user, "name", new_name)
+            # setattr(found_user, "name", new_name)
+            found_user.name = new_name
             found_user.save()
             msg = 'Successfully edited the user data'
             status_code = status.HTTP_200_OK
@@ -2366,8 +2373,15 @@ class UpdateUserDeatilView(APIView):
         user_id = get_user_id_from_token(request)
         user = CustomUser.objects.filter(id=user_id).first()
         if user:
-            if 'name' in request.POST:
-                user.name = request.POST['name']
+            # if 'name' in request.POST:
+            if not 'name' in request.data or not request.data['name']:
+                return Response({'Message': 'Please Provide New Name to update.'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # user.name = request.POST['name']
+                new_name = request.data['name']
+                print("the OLD name is as follows:", user.name)
+                print("the new name is as follows:", new_name)
+                user.name = new_name
             user.save()
             return Response({'Message': 'User details updated successfully.'}, status=status.HTTP_200_OK)
         else:
@@ -3358,9 +3372,215 @@ class get_membership(APIView):
 from dateutil.relativedelta import relativedelta   
 from datetime import datetime
 
+# class AdminUpdateMembership(APIView):
+#     """ 
+#     Update-Membership-details if token is of super user
+#     """
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, format=None):
+#         user_id = get_user_id_from_token(request)
+#         user, is_superuser = IsSuperUser(user_id)
+#         if not user or not is_superuser:
+#             msg = 'could not found the super user'
+#             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+#         if 'membership_id' not in request.data or not request.data.get('membership_id'):
+#             msg = 'could not found the membership_id'
+#             return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
+        
+#         if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits', 'stripe_price_id', 'Membership Feature 1', 'Membership Feature 2', 'Membership Feature 3', 'Membership Feature 4', 'Membership Feature 5']):
+#             msg = 'No details given to update in Membership.'
+#             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
+            
+#         membership = Membership.objects.filter(id=request.data.get('membership_id')).first()
+#         if not membership :
+#             return Response({'Message' : 'Could not got the Membership Details'}, status=status.HTTP_204_NO_CONTENT)
+
+#         try:
+
+#             if 'price' in request.data:
+#                 membership.price = request.data['price']
+#             if 'name' in request.data:
+#                 membership.name = request.data['name']
+#             if 'duration_days' in request.data:
+#                 membership.duration_days = request.data['duration_days']
+#             if 'credits' in request.data:
+#                 membership.credits = request.data['credits']
+
+#             membership.save()
+            
+#             msg = 'Successfully Modified the Membership details'
+#             status_code = status.HTTP_200_OK
+            
+#         except Exception as e:
+#             msg = f'Membership details Update Failed: {str(e)}'
+#             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+#         return Response({'Message' : msg}, status=status_code)
+    
+
+# class AdminUpdateMembership(APIView):
+#     """
+#     Update-Membership-details if token is of super user
+#     """
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, format=None):
+#         user_id = get_user_id_from_token(request)
+#         user, is_superuser = IsSuperUser(user_id)
+#         if not user or not is_superuser:
+#             msg = 'Could not find the super user'
+#             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+#         if 'membership_id' not in request.data or not request.data.get('membership_id'):
+#             msg = 'Could not find the membership_id'
+#             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+#         if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits']):
+#             msg = 'No details given to update in Membership.'
+#             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+#         membership = Membership.objects.filter(id=request.data.get('membership_id')).first()
+#         if not membership:
+#             return Response({'Message': 'Could not get the Membership Details'}, status=status.HTTP_204_NO_CONTENT)
+
+#         try:
+#             stripe_price_id = membership.stripe_price_id
+#             if not stripe_price_id:
+#                 msg = 'Stripe price ID not found for the membership'
+#                 return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+#             if 'price' in request.data:
+#                 new_price = request.data['price']
+#                 stripe.Price.modify(
+#                     stripe_price_id,
+#                     unit_amount=int(new_price * 100),  # Stripe expects the amount in cents
+#                 )
+#                 membership.price = new_price
+
+#             if 'name' in request.data:
+#                 new_name = request.data['name']
+#                 stripe.Product.modify(
+#                     stripe.Price.retrieve(stripe_price_id)['product'],
+#                     name=new_name
+#                 )
+#                 membership.name = new_name
+
+#             if 'duration_days' in request.data:
+#                 new_duration = request.data['duration_days']
+#                 stripe.Price.modify(
+#                     stripe_price_id,
+#                     recurring={'interval': 'day', 'interval_count': new_duration}
+#                 )
+#                 membership.duration_days = new_duration
+
+#             if 'credits' in request.data:
+#                 membership.credits = request.data['credits']
+
+#             membership.save()
+
+#             msg = 'Successfully Modified the Membership details'
+#             status_code = status.HTTP_200_OK
+
+#         except Exception as e:
+#             msg = f'Membership details Update Failed: {str(e)}'
+#             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+#         return Response({'Message': msg}, status=status_code)
+
+
+# class AdminUpdateMembership(APIView):
+#     """
+#     Update Membership details if the token is of a superuser.
+#     """
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, format=None):
+#         user_id = get_user_id_from_token(request)
+#         user, is_superuser = IsSuperUser(user_id)
+#         if not user or not is_superuser:
+#             msg = 'Could not find the superuser'
+#             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+
+#         membership_id = request.data.get('membership_id')
+#         if not membership_id:
+#             msg = 'Could not find the membership_id'
+#             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+#         try:
+#             membership = Membership.objects.get(id=membership_id)
+#         except Membership.DoesNotExist:
+#             msg = 'Membership not found'
+#             return Response({'Message': msg}, status=status.HTTP_404_NOT_FOUND)
+
+#         try:
+#             stripe_price_id = membership.stripe_price_id
+
+#             if 'duration_days' in request.data:
+#                 new_duration = request.data['duration_days']
+#                 if stripe_price_id:
+#                     stripe.Price.modify(
+#                         stripe_price_id,
+#                         recurring={'interval': 'day', 'interval_count': new_duration}
+#                     )
+#                 else:
+#                     # Log error or raise exception, as modifying duration without a price might lead to inconsistency
+#                     pass
+
+#                 membership.duration_days = new_duration
+
+#             if 'price' in request.data:
+#                 new_price = request.data['price']
+#                 if stripe_price_id:
+#                     stripe.Price.modify(
+#                         stripe_price_id,
+#                         unit_amount=int(new_price * 100)  # Amount in cents
+#                     )
+                    
+#                 else:
+#                     # Log error or raise exception, as modifying price without a price might lead to inconsistency
+#                     pass
+
+#                 membership.price = new_price
+
+#             if 'name' in request.data:
+#                 new_name = request.data['name']
+#                 if stripe_price_id:
+#                     stripe.Product.modify(
+#                         stripe.Price.retrieve(stripe_price_id)['product'],
+#                         name=new_name
+#                     )
+#                 else:
+#                     # Log error or raise exception, as modifying name without a price might lead to inconsistency
+#                     pass
+
+#                 membership.name = new_name
+
+#             if 'credits' in request.data:
+#                 membership.credits = request.data['credits']
+
+#             membership.save()
+
+#             msg = 'Successfully modified the Membership details'
+#             status_code = status.HTTP_200_OK
+
+#         except stripe.error.StripeError as e:
+#             msg = f'Stripe error: {str(e)}'
+#             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+#         except Exception as e:
+#             msg = f'Error: {str(e)}'
+#             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+#         return Response({'Message': msg}, status=status_code)
+
+
 class AdminUpdateMembership(APIView):
-    """ 
-    Update-Membership-details if token is of super user
+    """
+    Update Membership details if the token is of a superuser.
     """
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -3369,42 +3589,99 @@ class AdminUpdateMembership(APIView):
         user_id = get_user_id_from_token(request)
         user, is_superuser = IsSuperUser(user_id)
         if not user or not is_superuser:
-            msg = 'could not found the super user'
+            msg = 'Could not find the superuser'
             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if 'membership_id' not in request.data or not request.data.get('membership_id'):
-            msg = 'could not found the membership_id'
-            return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits', 'stripe_price_id', 'Membership Feature 1', 'Membership Feature 2', 'Membership Feature 3', 'Membership Feature 4', 'Membership Feature 5']):
-            msg = 'No details given to update in Membership.'
+        membership_id = request.data.get('membership_id')
+        if not membership_id:
+            msg = 'Could not find the membership_id'
             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
-            
-        membership = Membership.objects.filter(id=request.data.get('membership_id')).first()
-        if not membership :
-            return Response({'Message' : 'Could not got the Membership Details'}, status=status.HTTP_204_NO_CONTENT)
+        
 
         try:
+            membership = Membership.objects.get(id=membership_id)
+            duration = membership.duration_days 
+        except Membership.DoesNotExist:
+            msg = 'Membership not found'
+            return Response({'Message': msg}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            stripe_price_id = membership.stripe_price_id
 
             if 'price' in request.data:
-                membership.price = request.data['price']
+                new_price = request.data['price']
+                price = stripe.Price.retrieve(stripe_price_id)
+
+                # Extract the product_id from the price object
+                product_id = price['product']
+
+                # Create new price
+                new_stripe_price = stripe.Price.create(
+                    unit_amount=int(new_price * 100),  # Amount in cents
+                    currency="usd",
+                    recurring={
+                        'interval': 'day',
+                        'interval_count': duration,  # recurring every 30 days
+                    },
+                    product=product_id,
+                    # Add any other parameters needed for your price creation
+                )
+
+                new_price_id = new_stripe_price['id']
+
+                # Retrieve the product associated with the new price
+                product_id = new_stripe_price['product']
+
+                # Retrieve the product details
+                product = stripe.Product.retrieve(product_id)
+
+                # Mark the new price as the default price by updating the product metadata
+                stripe.Product.modify(
+                    product_id,
+                    default_price=new_stripe_price['id']
+                    #metadata={'default_price': new_stripe_price['id']}
+                )
+
+                membership.price = new_price
+                membership.stripe_price_id = new_price_id
+
+
             if 'name' in request.data:
-                membership.name = request.data['name']
-            if 'duration_days' in request.data:
-                membership.duration_days = request.data['duration_days']
+                new_name = request.data['name']
+                if stripe_price_id:
+                    stripe.Product.modify(
+                        stripe.Price.retrieve(stripe_price_id)['product'],
+                        name=new_name
+                    )
+                else:
+                    # Log error or raise exception, as modifying name without a price might lead to inconsistency
+                    pass
+
+                membership.name = new_name
+
             if 'credits' in request.data:
                 membership.credits = request.data['credits']
 
             membership.save()
-            
-            msg = 'Successfully Modified the Membership details'
+
+            msg = 'Successfully modified the Membership details'
             status_code = status.HTTP_200_OK
-            
-        except Exception as e:
-            msg = f'Membership details Update Failed: {str(e)}'
+
+        except stripe.error.StripeError as e:
+            msg = f'Stripe error: {str(e)}'
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        return Response({'Message' : msg}, status=status_code)
-    
+
+        except Exception as e:
+            msg = f'Error: {str(e)}'
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        return Response({'Message': msg}, status=status_code)
+
+
+
+
+
+
 class get_credit_detail(APIView):
     """ 
     Get-Credit-details if token is of user
