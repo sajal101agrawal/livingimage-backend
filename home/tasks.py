@@ -122,7 +122,7 @@ def regenerate_image(image_id):
 
         if image_path is not None:
             print("prior preprocess")
-            preprocessed_image = preprocess_image(image_path)
+            preprocessed_image = preprocess_image(str(image_path))
             print("after preprocess")
 
             response = client.images.create_variation(
@@ -157,10 +157,12 @@ def regenerate_image(image_id):
     #     return  regenerated_image_url
     
     def regenerate_image_logic(original_image):
-        if original_image.photo and str(original_image.photo) != "":
-            image_path = str(original_image.photo)
-        else:
-            image_path = None
+        # if original_image.photo and str(original_image.photo) != "":
+        #     image_path = str(original_image.photo)
+        # else:
+        #     image_path = None
+
+        image_path = original_image.photo if original_image.photo else None    
 
         print("GONE FROM HERE")
 
