@@ -158,11 +158,12 @@ EMAIL_HOST_PASSWORD = '@Livingimage123'  # Your GoDaddy email password
 # EMAIL_HOST_PASSWORD = '@Livingimage123'  # Your Microsoft account password
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'email-smtp.us-east-1.amazonaws.com'  # Replace your-region with the appropriate AWS region
-# EMAIL_PORT = 587  # Use 587 for TLS
+# EMAIL_HOST = 'livingimage-io.mail.protection.outlook.com'
+# EMAIL_PORT = 587
 # EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'AKIAZI2LGNXL7N5LRN4W'  # SMTP_USER
-# EMAIL_HOST_PASSWORD = 'BGQqdu83iR043RU2iXzXK6avJgbbSiJL5Objxt3+fN6c'  # SMTP_PASS
+# EMAIL_HOST_USER = 'support@livingimage.io'
+# EMAIL_HOST_PASSWORD = '@Livingimage123'
+
 
 # In settings.py
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'  # or 'django.db.models.BigAutoField'

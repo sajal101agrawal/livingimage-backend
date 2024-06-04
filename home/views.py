@@ -1493,72 +1493,178 @@ class AdminGetOneOriginalImage(APIView):
 #------------------------------------------------ ADMIN Get SINGLE Original Image-------------------------------------------------
 
 #------------------------------------------------ ADMIN Analytics-------------------------------------------------
+# class AdminAnalytics(APIView):
+#     """ 
+#     Get-Analytics if token is of super user
+#     """
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+#     def post(self, request, format=None):
+#         user_id = get_user_id_from_token(request)
+#         user, is_superuser = IsSuperUser(user_id)
+#         if not user or not is_superuser:
+#             msg = 'could not found the super user'
+#             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+#         if not "date_filter" in request.data or not request.data.get("date_filter"):
+#             return Response({"Message":"Please specify the date_filter eg: day, week, month, year or custom"})
+
+#         # # type_of_transaction="Credit Addition",Credit Deduction
+#         date_filter = request.data.get("date_filter")
+
+#         if date_filter:
+#             if date_filter == "custom":
+#                 if not "start_date" in request.data or not request.data.get("start_date"):
+#                     return Response({"Message":"Please specify the start_date eg: 20-04-2020"})
+#                 if not "end_date" in request.data or not request.data.get("end_date"):
+#                     return Response({"Message":"Please specify the end_date eg: 20-10-2020"})
+#                 # start_date=request.data.get("start_date").strftime("%d/%m/%Y %H:%M:%S")
+#                 # end_date=request.data.get("end_date").strftime("%d/%m/%Y %H:%M:%S")
+
+#                 try:
+#                     start_date = datetime.strptime(request.data.get("start_date"), "%d-%m-%Y")
+#                     end_date = datetime.strptime(request.data.get("end_date"), "%d-%m-%Y")
+#                 except ValueError:
+#                     return Response({"Message":"Date format should be DD-MM-YYYY"})
+#             else:
+#                 if not "frequency" in request.data or not request.data.get("frequency"):
+#                     return Response({"Message":"Please specify the frequency eg: 1,2 ..."})
+#                 frequency = request.data.get("frequency") 
+
+
+
+
+#         #periods = request.data.get("periods")
+#         now=datetime.now(pytz.utc)
+
+#         if date_filter == 'month' or date_filter == 'week' or date_filter == 'year' or date_filter == 'day':
+#             if date_filter == 'week':
+#                 end_date = now
+#                 start_date = now - timedelta(weeks=frequency)
+#             elif date_filter == 'month':
+#                 end_date = now
+#                 start_date = now - relativedelta(months=frequency)
+#             elif date_filter == 'year':
+#                 end_date = now
+#                 start_date = now - relativedelta(years=frequency)
+#             elif date_filter == 'day':
+#                 end_date = now
+#                 start_date = now - timedelta(days=frequency)
+#         else:
+#             start_date=start_date
+#             end_date=end_date
+
+        
+
+# # , updated__gte=start_date,  updated__lte=end_date).order_by('-date_time')
+
+
+#         # User Table
+#         user_ = CustomUser.objects.filter(created__gte=start_date,  created__lte=end_date).order_by('-created')
+#         total_user = len(user_)
+
+#         # Payment Table
+#         payment = PaymentRecord.objects.filter(date_time__gte=start_date,  date_time__lte=end_date).order_by('-date_time')
+#         total_payment_count = len(payment)
+
+#         tot_pay=0
+#         if payment:
+#             for pay in payment:
+#                 tot_pay = tot_pay + pay.total_amount
+        
+
+#         # Credit Table
+#         tot_cred_add = 0
+#         tot_cred_deduct = 0
+#         credit_mod = CreditHistory.objects.filter(date_time__gte=start_date,  date_time__lte=end_date)
+#         total_credit_records = len(credit_mod)
+#         credit_add = CreditHistory.objects.filter(date_time__gte=start_date,  date_time__lte=end_date , type_of_transaction = "Credit Addition").order_by('-date_time')
+#         credit_deduct = CreditHistory.objects.filter(date_time__gte=start_date,  date_time__lte=end_date , type_of_transaction = "Credit Deduction").order_by('-date_time')
+
+#         if credit_add:
+#             for adds in credit_add:
+#                 tot_cred_add = tot_cred_add + adds.total_credits_deducted
+
+#         if credit_deduct:
+#             for deducts in credit_deduct:
+#                 tot_cred_deduct = tot_cred_deduct + deducts.total_credits_deducted
+
+
+
+#         # Original Image Table
+#         img = Image.objects.filter(updated__gte=start_date,  updated__lte=end_date).order_by('-updated')
+#         total_original_image = len(img)
+
+#         # Regenerated Image Table
+#         regen_img = RegeneratedImage.objects.filter(updated__gte=start_date,  updated__lte=end_date).order_by('-updated')
+#         total_regen_image = len(regen_img)
+
+#         jsonn_response = {
+#             'Total user' : total_user,
+#             'Total Original Images' : total_original_image,
+#             'Total Regenerated Images' : total_regen_image,
+#             'Total Payments' : total_payment_count,
+#             'Total Payment Amount' : str(tot_pay),
+#             'Total Credit Records': total_credit_records,
+#             'Total Credit Added': tot_cred_add,
+#             'Total Credit Deducted': tot_cred_deduct,
+#         }
+#         response = Response(jsonn_response, status=status.HTTP_200_OK)
+        
+#         # Set the Referrer Policy header
+#         response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+#         return response
+    
+
+
 class AdminAnalytics(APIView):
     """ 
     Get-Analytics if token is of super user
     """
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
+
     def post(self, request, format=None):
         user_id = get_user_id_from_token(request)
         user, is_superuser = IsSuperUser(user_id)
         if not user or not is_superuser:
-            msg = 'could not found the super user'
+            msg = 'could not find the super user'
             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
         
         if not "date_filter" in request.data or not request.data.get("date_filter"):
-            return Response({"Message":"Please specify the date_filter eg: day, week, month, year or custom"})
+            return Response({"Message":"Please specify the date_filter eg: day, week, month"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # # type_of_transaction="Credit Addition",Credit Deduction
         date_filter = request.data.get("date_filter")
+        now = timezone.now()
+        analytics_data = []
 
-        if date_filter:
-            if date_filter == "custom":
-                if not "start_date" in request.data or not request.data.get("start_date"):
-                    return Response({"Message":"Please specify the start_date eg: 20-04-2020"})
-                if not "end_date" in request.data or not request.data.get("end_date"):
-                    return Response({"Message":"Please specify the end_date eg: 20-10-2020"})
-                # start_date=request.data.get("start_date").strftime("%d/%m/%Y %H:%M:%S")
-                # end_date=request.data.get("end_date").strftime("%d/%m/%Y %H:%M:%S")
-
-                try:
-                    start_date = datetime.strptime(request.data.get("start_date"), "%d-%m-%Y")
-                    end_date = datetime.strptime(request.data.get("end_date"), "%d-%m-%Y")
-                except ValueError:
-                    return Response({"Message":"Date format should be DD-MM-YYYY"})
-            else:
-                if not "frequency" in request.data or not request.data.get("frequency"):
-                    return Response({"Message":"Please specify the frequency eg: 1,2 ..."})
-                frequency = request.data.get("frequency")
-
-
-
-
-        #periods = request.data.get("periods")
-        now=datetime.now(pytz.utc)
-
-        if date_filter == 'month' or date_filter == 'week' or date_filter == 'year' or date_filter == 'day':
-            if date_filter == 'week':
-                end_date = now
-                start_date = now - timedelta(weeks=frequency)
-            elif date_filter == 'month':
-                end_date = now
-                start_date = now - relativedelta(months=frequency)
-            elif date_filter == 'year':
-                end_date = now
-                start_date = now - relativedelta(years=frequency)
-            elif date_filter == 'day':
-                end_date = now
-                start_date = now - timedelta(days=frequency)
+        if date_filter == 'day':
+            for i in range(1, 13):
+                start_date = now - timedelta(days=i)
+                end_date = now - timedelta(days=i-1)
+                data = self.get_analytics_data(start_date, end_date)
+                analytics_data.append(data)
+        elif date_filter == 'week':
+            for i in range(1, 13):
+                start_date = now - timedelta(weeks=i)
+                end_date = now - timedelta(weeks=i-1)
+                data = self.get_analytics_data(start_date, end_date)
+                analytics_data.append(data)
+        elif date_filter == 'month':
+            for i in range(1, 13):
+                start_date = now - timedelta(days=30*i)
+                end_date = now - timedelta(days=30*(i-1))
+                data = self.get_analytics_data(start_date, end_date)
+                analytics_data.append(data)
         else:
-            start_date=start_date
-            end_date=end_date
+            return Response({"Message":"Invalid date_filter"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(analytics_data, status=status.HTTP_200_OK)
+
+    def get_analytics_data(self, start_date, end_date):
 
         
-
-# , updated__gte=start_date,  updated__lte=end_date).order_by('-date_time')
-
-
         # User Table
         user_ = CustomUser.objects.filter(created__gte=start_date,  created__lte=end_date).order_by('-created')
         total_user = len(user_)
@@ -1610,12 +1716,27 @@ class AdminAnalytics(APIView):
             'Total Credit Deducted': tot_cred_deduct,
         }
         response = Response(jsonn_response, status=status.HTTP_200_OK)
-        
+
+        # Analyze data for the given date range
+        # Example: 
+        # user_count = CustomUser.objects.filter(created__gte=start_date, created__lt=end_date).count()
+        # image_count = Image.objects.filter(updated__gte=start_date, updated__lt=end_date).count()
+        # Similarly, compute other analytics metrics
+
+        # # For demonstration purpose, return dummy data
+        # return {
+        #     'start_date': start_date.strftime("%Y-%m-%d"),
+        #     'end_date': end_date.strftime("%Y-%m-%d"),
+        #     'user_count': 10,  # Example count
+        #     'image_count': 20,  # Example count
+        #     'credit_deducted_count': 5,  # Example count
+        #     'payment_count': 8,  # Example count
+        # }
+
         # Set the Referrer Policy header
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 
-        return response
-
+        return jsonn_response
 #------------------------------------------------ ADMIN Analytics-------------------------------------------------
 
 
@@ -1886,11 +2007,6 @@ class UploadImageView(APIView):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
-    # def get(self, request, *args, **kwargs):
-    #     # Your get method logic here
-    #     # You can include the CSRF token in the response if needed
-    #     return super().get(request, *args, **kwargs)
-
 
     def post(self, request):
         mutable_post = request.POST.copy()
@@ -1898,13 +2014,6 @@ class UploadImageView(APIView):
         if 'photo' in request.FILES:
             form = ImageForm(request.POST, request.FILES)
         elif 'photo_url' in request.data:
-            # Download the image from the provided URL and create a temporary file
-            # photo_url = request.data['photo_url']
-            # try:
-            #     response = requests.get(photo_url, stream=True)
-            #     response.raise_for_status()
-            # except requests.exceptions.RequestException as e:
-            #     return JsonResponse({'Message': f'Failed to fetch image from URL: {str(e)}'}, status=400)
             
             photo_url = request.data['photo_url']
             try:
@@ -1921,7 +2030,6 @@ class UploadImageView(APIView):
 
             # Create a temporary file to save the downloaded image
             img_temp = tempfile.NamedTemporaryFile(delete=False)
-            # img_temp = NamedTemporaryFile(delete=False)
             img_temp.write(response.content)
             img_temp.flush()
             photo = None
@@ -1929,14 +2037,13 @@ class UploadImageView(APIView):
             mutable_post['photo'] = img_temp
             form = ImageForm(mutable_post, request.FILES)
 
-            # Create dummy POST data with 'photo' field set to the downloaded image file
-            # request.POST = request.POST.copy()
-            # request.FILES = {'photo': img_temp}
-            # form = ImageForm(request.POST, request.FILES)
+            
         else:
-            return JsonResponse({'Message': 'No valid image provided.'}, status=400)
+            # return JsonResponse({'Message': 'No valid image provided.'}, status=400)
+            print("No Image Found!!!!!!!!!!!!!!!!!!")                                       # NEW ADDED
+# -----------------------------------GOOD TILL HERE FROM ABOVE-----------------------------------------------------------------------
 
-
+        form = ImageForm(mutable_post, request.FILES)                                       # NEW ADDED
         # form = ImageForm(request.POST, request.FILES)
         if form.is_valid():
             # Set the user before saving the form
@@ -1972,14 +2079,20 @@ class UploadImageView(APIView):
             #photo_url = request.data['photo_url']
             photo_url = request.data.get('photo_url', None)
             print('Photo URL : ',photo_url)
-            photo = form.cleaned_data['photo']
+            print("THIS HERE BEFORE PHOTO")
+            try:
+                photo = form.cleaned_data['photo']
+            except:
+                photo = None
+            print("THIS HERE AFTER PHOTO")
             print('The erro might be up here')
 #------------------------------------NEW PHOTO FIELD------------------------------------------------------------------
             print("The details are as follows for image upload")
             print("frequency:", frequency) 
             print("prompt:", prompt)
             print("frequency_type:", frequency_type)
-            print("photo:", photo)
+            # if photo:
+            #     print("photo:", photo)
             print("public:", public)
             print("user_image_name:", user_image_name)
             print("tag:", tag)
@@ -1988,36 +2101,58 @@ class UploadImageView(APIView):
             max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
                 # Check if the size of the uploaded image is less than or equal to the maximum size limit
             if photo_url is None:
-                if photo.size > max_size:
-                    return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
+                if photo:
+                    if photo.size > max_size:
+                        return JsonResponse({'Message': f'Uploaded image size exceeds the limit ({settings.MAX_IMAGE_SIZE_MB} MB)'}, status=400)
 
 
             # Calculate next regeneration datetime
             next_regeneration_at = calculate_regeneration_time(frequency, frequency_type)
+            print("WORK THIS HERE FIRST FIRST")
             image_name=generate_random_string(15)
             # Save the image file to S3 with the desired file name
             file_name = f"{image_name}.jpg"  # Assuming the image format is JPG
-            if photo_url:
-                file_path = default_storage.save(file_name, img_temp) # It should be a string so we can split it to our need
+            # if photo_url:
+            #     file_path = default_storage.save(file_name, img_temp) # It should be a string so we can split it to our need
+            # else:
+            #     file_path = default_storage.save(file_name, photo)
+            # print("The file path is : ",file_path)
+
+            if photo or photo_url:
+
+                if photo_url:
+                    file_path = default_storage.save(file_name, img_temp) # It should be a string so we can split it to our need
+                elif photo:
+                    file_path = default_storage.save(file_name, photo)
+                print("The file path is : ",file_path)
+
+                # Get the URL using the storage backend
+                original_image_url = default_storage.url(file_name)
+                print('The original image url is :',original_image_url)
+
+                edit_url=original_image_url.split('?')[0]
+                print('The Edited url is :',edit_url)
+
+                # Save the form data
+                image_instance = form.save(commit=False)
+                image_instance.nextregeneration_at = next_regeneration_at
+                image_instance.image_name=image_name
+                image_instance.photo=edit_url #file_path
+                image_instance.save()
+                
             else:
-                file_path = default_storage.save(file_name, photo)
-            print("The file path is : ",file_path)
-
-            # Get the URL using the storage backend
-            original_image_url = default_storage.url(file_name)
-            print('The original image url is :',original_image_url)
-
-            edit_url=original_image_url.split('?')[0]
-            print('The Edited url is :',edit_url)
-            
-            # Save the form data
-            image_instance = form.save(commit=False)
-            image_instance.nextregeneration_at = next_regeneration_at
-            image_instance.image_name=image_name
-            image_instance.photo=edit_url #file_path
-            image_instance.save()
+                # Save the form data
+                image_instance = form.save(commit=False)
+                edit_url =None
+                image_instance.nextregeneration_at = next_regeneration_at
+                image_instance.image_name=image_name
+                image_instance.photo=edit_url #file_path
+                image_instance.save()
             
 
+            print("WORK THIS HERE !11111111111111111111111111111111111111111111111111111")
+
+# -----------------------------------GOOD FROM HERE TO BELOW-----------------------------------------------------------------------
 
             History.objects.create(
                 tag='create',
@@ -2034,9 +2169,12 @@ class UploadImageView(APIView):
 
             # Regenerate and save to S3
             regen_image_url = self.regenerate_image_logic(image_instance)
+            print("WORK THIS HERE !222222222222222222222222222222222222")
 
             # Calculate the regenerative_at datetime based on frequency and frequency_type
             regenerative_at_ = calculate_regeneration_time(image_instance.frequency,image_instance.frequency_type)
+            print("WORK THIS HERE !33333333333333333333333333333333333333333333333")
+
 
             self.save_to_s3(regen_image_url, image_instance, user, regenerative_at_)
 
@@ -2063,8 +2201,6 @@ class UploadImageView(APIView):
             if 'img_temp' in locals() and hasattr(img_temp, 'name') and os.path.exists(img_temp.name):
                 img_temp.close()
                 os.unlink(img_temp.name)
-            #form.save()
-            #return redirect('/api/dashboard/')
             return JsonResponse({'Message': 'Image Upload successful.'})
         else:
             if 'img_temp' in locals() and hasattr(img_temp, 'name') and os.path.exists(img_temp.name):
@@ -2082,17 +2218,6 @@ class UploadImageView(APIView):
         import io
         print("Hi, I am here")
         # # Open the image file
-        # with Image.open(image_path) as img:
-        #     # Convert image to RGBA mode
-        #     img = img.convert("RGBA")
-        #     # Resize the image
-        #     resized_img = img.resize(target_size)
-        #     # Create a BytesIO object to store the image data
-        #     img_byte_array = io.BytesIO()
-        #     # Save the image to the BytesIO object in PNG format
-        #     resized_img.save(img_byte_array, format="PNG")
-        #     # Get the bytes from the BytesIO object
-        #     processed_image = img_byte_array.getvalue()
 
         print("Downloading image from:", image_path)
         # Download the image from the URL
@@ -2116,26 +2241,111 @@ class UploadImageView(APIView):
 
 
 
-    def generate_image(self, image_path):
+    # def generate_image(self, image_path,prompt):
+    #     print("Inside the generate image function")
+    #     # Preprocess the image
+    #     openai_api_key=openai_account.objects.first()
+    #     api_key=openai_api_key.key
+
+    #     # preprocessed_image = self.preprocess_image(image_path)
+    #     client = OpenAI(api_key=api_key)
+    #     # response = client.images.create_variation(
+    #     # image=preprocessed_image,
+    #     # n=2,
+    #     # size="1024x1024"
+    #     # )
+
+    #     print("The imaeg path is ",image_path)
+
+
+    #     if image_path:
+    #         preprocessed_image = self.preprocess_image(image_path)
+    #         response = client.images.create_variation(
+    #         image=preprocessed_image,
+    #         n=2,
+    #         size="1024x1024"
+    #         )
+    #     print("The image path is wokring 222222222222222222222222",image_path)
+
+
+
+    #     response = client.images.generate(
+    #     model="dall-e-3",
+    #     prompt=prompt,
+    #     size="1024x1024",
+    #     quality="standard",
+    #     n=1,
+    #     )
+
+
+    #     generated_image_url = response.data[0].url
+
+    #     print("The generated imaeg url: ",generated_image_url)
+
+    #     return generated_image_url
+    
+
+    def generate_image(self, image_path, prompt):
+        print("Inside the generate image function")
+
         # Preprocess the image
         openai_api_key=openai_account.objects.first()
         api_key=openai_api_key.key
-        preprocessed_image = self.preprocess_image(image_path)
+
         client = OpenAI(api_key=api_key)
-        response = client.images.create_variation(
-        image=preprocessed_image,
-        n=2,
-        size="1024x1024"
-        )
+        
+        print("The imaeg path is ",image_path)
+
+
+        if image_path is not None:
+            print("prior preprocess")
+            preprocessed_image = self.preprocess_image(image_path)
+            print("after preprocess")
+
+            response = client.images.create_variation(
+            image=preprocessed_image,
+            n=2,
+            size="1024x1024"
+            )
+            print("The image path is wokring 222222222222222222222222",image_path)
+
+        else:
+            print("Might have worked")
+            response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+            )
+
 
         generated_image_url = response.data[0].url
+
+        print("The generated image url: ",generated_image_url)
 
         return generated_image_url
 
 
+    # def regenerate_image_logic(self, original_image):
+    #     image_path=str(original_image.photo)
+    #     prompt = original_image.prompt
+    #     regenerated_image_url = self.generate_image(image_path,prompt)
+    #     return  regenerated_image_url
+    
     def regenerate_image_logic(self, original_image):
-        image_path=str(original_image.photo)
-        regenerated_image_url = self.generate_image(image_path)
+        if original_image.photo and str(original_image.photo) != "":
+            image_path = str(original_image.photo)
+        else:
+            image_path = None
+
+        print("GONE FROM HERE")
+
+
+        prompt = original_image.prompt
+        print("The Prompt is: ",prompt)
+        regenerated_image_url = self.generate_image(image_path,prompt)
+        print("After the generate iamge function")
         return  regenerated_image_url
 
     def save_to_s3(self, image_url, original_image, user, regenerative_at_):
@@ -4042,3 +4252,136 @@ class ChangeCardDetailView(APIView):
         except Exception as e:
             return JsonResponse({'Message': f"Error Occured : {str(e)}"}, status=400)
         # return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+from google.analytics.data import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import RunReportRequest, DateRange
+from google.oauth2 import service_account
+
+
+
+class AdminGoogleAnalytics(APIView):
+    """ 
+    Get-Google-Analytics if token is of super user
+    """
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        import datetime
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not find the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if not "date_filter" in request.data or not request.data.get("date_filter"):
+            return Response({"Message":"Please specify the date_filter eg: day, week, month"}, status=status.HTTP_400_BAD_REQUEST)
+
+        date_filter = request.data.get("date_filter")
+        
+
+        def get_date_ranges(period, range_num=12):
+            today = datetime.date.today()
+            ranges = []
+            if period == 'day':
+                for i in range(range_num):
+                    date = today - datetime.timedelta(days=i)
+                    ranges.append({"start_date": date.isoformat(), "end_date": date.isoformat()})
+            elif period == 'week':
+                for i in range(range_num):
+                    start_date = today - datetime.timedelta(weeks=i)
+                    end_date = start_date + datetime.timedelta(days=6)
+                    ranges.append({"start_date": start_date.isoformat(), "end_date": end_date.isoformat()})
+            elif period == 'month':
+                for i in range(range_num):
+                    start_date = (today.replace(day=1) - datetime.timedelta(days=30*i)).replace(day=1)
+                    end_date = (start_date + datetime.timedelta(days=32)).replace(day=1) - datetime.timedelta(days=1)
+                    ranges.append({"start_date": start_date.isoformat(), "end_date": end_date.isoformat()})
+            return ranges
+
+        def get_ga4_data(period='day', range_num=12):
+            KEY_FILE_LOCATION = r"C:\Users\Adil Anwar\Downloads\new-livingimage-analytics-api-8842a75f6a33.json"
+            PROPERTY_ID = '444002701'
+            
+            credentials = service_account.Credentials.from_service_account_file(KEY_FILE_LOCATION)
+            client = BetaAnalyticsDataClient(credentials=credentials)
+            
+            date_ranges = get_date_ranges(period, range_num)
+            
+            result = {
+                "date": [],
+                "pageViews": [],
+                "users": [],
+                "newUsers": [],
+                "averageSessionDuration": []
+            }
+            
+            for date_range in date_ranges:
+                request = RunReportRequest(
+                    property=f"properties/{PROPERTY_ID}",
+                    date_ranges=[DateRange(start_date=date_range["start_date"], end_date=date_range["end_date"])],
+                    metrics=[
+                        {"name": "screenPageViews"},
+                        {"name": "activeUsers"},
+                        {"name": "newUsers"},
+                        {"name": "averageSessionDuration"}
+                    ],
+                    dimensions=[{"name": "date"}]
+                )
+
+                response = client.run_report(request)
+                
+                pageViews = 0
+                users = 0
+                newUsers = 0
+                totalDuration = 0
+                sessionCount = 0
+                
+                for row in response.rows:
+                    pageViews += int(row.metric_values[0].value)
+                    users += int(row.metric_values[1].value)
+                    newUsers += int(row.metric_values[2].value)
+                    totalDuration += float(row.metric_values[3].value) * int(row.metric_values[1].value)
+                    sessionCount += int(row.metric_values[1].value)
+
+                averageSessionDuration = totalDuration / sessionCount if sessionCount else 0
+                
+                result["date"].append(f"{date_range['start_date']} to {date_range['end_date']}")
+                result["pageViews"].append(pageViews)
+                result["users"].append(users)
+                result["newUsers"].append(newUsers)
+                result["averageSessionDuration"].append(averageSessionDuration)
+
+            # Ensure result always contains exactly range_num periods
+            if len(result["date"]) > range_num:
+                result = {key: result[key][:range_num] for key in result}
+            elif len(result["date"]) < range_num:
+                additional_entries = range_num - len(result["date"])
+                for key in result:
+                    result[key].extend([0] * additional_entries if key != "date" else [""] * additional_entries)
+
+            return result
+
+        # if __name__ == '__main__':
+        # period = 'month'  # Change to 'day', 'week' or 'month' as needed
+        # range_num  = 12 # How many datas are needed
+        try:
+            data = get_ga4_data(date_filter)
+            
+
+            # jsonn_response = {
+            #     'Total user' : total_user,
+            #     'Total Original Images' : total_original_image,
+            #     'Total Regenerated Images' : total_regen_image,
+            #     'Total Payments' : total_payment_count,
+            #     'Total Payment Amount' : str(tot_pay),
+            #     'Total Credit Records': total_credit_records,
+            #     'Total Credit Added': tot_cred_add,
+            #     'Total Credit Deducted': tot_cred_deduct,
+            # }
+            # response = Response(jsonn_response, status=status.HTTP_200_OK)
+
+            return JsonResponse(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return JsonResponse({"Message":f"Error Occured: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

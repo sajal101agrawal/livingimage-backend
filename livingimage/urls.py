@@ -60,6 +60,8 @@ urlpatterns = [
     path('api/admin/add-credit/', AdminAddCredit.as_view(), name='AdminAddCredit'),  # Add Credit Admin
     path('api/admin/deduct-credit/', AdminDeductCredit.as_view(), name='AdminDeductCredit'),  # Add Credit Admin
 
+    path('api/admin/google-analytics/', AdminGoogleAnalytics.as_view(), name='AdminGoogleAnalytics'),  # Admin
+
 
     path('api/admin/update-membership/', AdminUpdateMembership.as_view(), name='AdminUpdateMembership'),  # Membership
 

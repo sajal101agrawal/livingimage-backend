@@ -69,6 +69,7 @@ def regenerate_image(image_id):
         import io
         print("Hi, I am here")
         print("Downloading image from:", image_path)
+        print("THe image path is ",image_path)
         # Download the image from the URL
         response = requests.get(image_path)
         if response.status_code != 200:
@@ -90,27 +91,84 @@ def regenerate_image(image_id):
 
 
 
-    def generate_image(image_path):
+    # def generate_image(image_path):
+    #     openai_api_key=openai_account.objects.first()
+    #     api_key=openai_api_key.key
+    #     preprocessed_image = preprocess_image(image_path)
+    #     client = OpenAI(api_key=api_key)
+    #     response = client.images.create_variation(
+    #     image=preprocessed_image,
+    #     n=2,
+    #     size="1024x1024"
+    #     )
+
+    #     # Extract URL of the generated image from the API response
+    #     generated_image_url = response.data[0].url
+
+    #     return generated_image_url
+    
+
+    def generate_image(image_path,prompt):
+        print("Inside the generate image function")
+
+        # Preprocess the image
         openai_api_key=openai_account.objects.first()
         api_key=openai_api_key.key
-        preprocessed_image = preprocess_image(image_path)
-        client = OpenAI(api_key=api_key)
-        response = client.images.create_variation(
-        image=preprocessed_image,
-        n=2,
-        size="1024x1024"
-        )
 
-        # Extract URL of the generated image from the API response
+        client = OpenAI(api_key=api_key)
+        
+        print("The imaeg path is ",image_path)
+
+
+        if image_path is not None:
+            print("prior preprocess")
+            preprocessed_image = preprocess_image(image_path)
+            print("after preprocess")
+
+            response = client.images.create_variation(
+            image=preprocessed_image,
+            n=2,
+            size="1024x1024"
+            )
+            print("The image path is wokring 222222222222222222222222",image_path)
+
+        else:
+            print("Might have worked")
+            response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+            )
+
+
         generated_image_url = response.data[0].url
+
+        print("The generated image url: ",generated_image_url)
 
         return generated_image_url
 
 
+    # def regenerate_image_logic(original_image):
+    #     #prompt=original_image.prompt
+    #     image_path=str(original_image.photo)
+    #     regenerated_image_url = generate_image(image_path)
+    #     return  regenerated_image_url
+    
     def regenerate_image_logic(original_image):
-        #prompt=original_image.prompt
-        image_path=str(original_image.photo)
-        regenerated_image_url = generate_image(image_path)
+        if original_image.photo and str(original_image.photo) != "":
+            image_path = str(original_image.photo)
+        else:
+            image_path = None
+
+        print("GONE FROM HERE")
+
+
+        prompt = original_image.prompt
+        print("The Prompt is: ",prompt)
+        regenerated_image_url = generate_image(image_path,prompt)
+        print("After the generate iamge function")
         return  regenerated_image_url
 
     def save_to_s3(image_url, original_image, user, regenerative_at_):        
@@ -174,11 +232,18 @@ def regenerate_image(image_id):
         # LOGIC 
         # Apply your regeneration logic here
         regenerated_image = regenerate_image_logic(original_image)
+        print("The regenerated Image URL is:",regenerated_image)
+        print("I AM WORKING TILL HERE REGENERATE IMAGE LOGIC")
         # Calculate the regenerative_at datetime based on frequency and frequency_type
         regenerative_at_ = calculate_regeneration_time(original_image.frequency,original_image.frequency_type)
+        print("I AM WORKING TILL HERE CALCULATE REGENERATE TIME")
         # Save the regenerated image to S3 and database
         user = original_image.user  #  CustomUser.objects.filter(id=user_id).first()
+        print("I AM getting user",user)
+
         save_to_s3(regenerated_image, original_image, user, regenerative_at_)
+        print("I AM WORKING TILL THE LAST OF CODE")
+
         user.credit= user.credit - 1
         user.save()
 
