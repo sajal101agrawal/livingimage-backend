@@ -2548,7 +2548,7 @@ class UpdateImageView(View):
                     image_name=image_name)
                 s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
                 edit_image_url = s3_base_url + image.image_name +'.jpg'
-                image.photo = edit_image_url
+                # image.photo = edit_image_url
                 image.save()
 
                 return JsonResponse({'Message': 'Image details updated successfully.'})
@@ -3462,6 +3462,14 @@ class StripeWebhookView(View):
                 user.stripe_customer_id = customer.id
                 user.save()
 
+            # Send email to user
+            # subject = "Payment Canceled"
+            # message = render_to_string('email/payment_canceled.html', {'user': user})
+            # from_email = "your_email@example.com"
+            # to_email = user.email
+
+            # send_mail(subject, message, from_email, [to_email])
+
 
         return HttpResponse(status=200)
 
@@ -4174,7 +4182,6 @@ class UpdateSubscriptionView(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
-            # data = json.loads(request.body)
             user_id = get_user_id_from_token(request)
             user = CustomUser.objects.filter(id=user_id).first()
             if not user:
@@ -4195,6 +4202,19 @@ class UpdateSubscriptionView(APIView):
 
             subscription_id = subscription_ids[0]
             subscription = stripe.Subscription.retrieve(subscription_id)
+
+#--------------------------CODE TO DEDEUCT OR ADD CREDITS-----------------------------------------------------------------------
+            old_membership_credits = user.membership.credits
+            new_membership_credits = mem.credits
+            # old_credit = old_membership.credit_amount if old_membership else 0
+            # new_membership = Membership.objects.get(stripe_price_id=new_price_id)
+            # new_credit = new_membership.credit_amount
+
+            credit_difference = new_membership_credits - old_membership_credits
+
+            # ADD/Deduct credits
+            user.credit += credit_difference
+#--------------------------CODE TO DEDEUCT OR ADD CREDITS-----------------------------------------------------------------------
 
             updated_subscription = stripe.Subscription.modify(
                 subscription_id,
@@ -4219,10 +4239,6 @@ class UpdateSubscriptionView(APIView):
                 user.membership_expiry = timezone.now() + timedelta(days = new_mems.duration_days)
             user.is_subscribed =True
             user.save()
-            # return JsonResponse({
-            #     'subscription': updated_subscription,
-            #     'upcoming_invoice': upcoming_invoice,
-            # })
         
             return JsonResponse({
                 'Message': "Subscription Updated Sucessfully"
