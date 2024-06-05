@@ -7,3 +7,4 @@ config.ini
 
 # Ignore Django migration files
 **/migrations/*.py
+new-livingimage-analytics-api-8842a75f6a33.json
