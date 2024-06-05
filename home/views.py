@@ -3,7 +3,7 @@ from .forms import ImageForm#, ProfilePicForm
 from .models import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .email import send_otp_via_email
+from .email import send_otp_via_email, send_payment_status_email
 import random
 import json
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -3292,6 +3292,7 @@ class StripeWebhookView(View):
                 )
                 user.stripe_customer_id = customer.id
                 user.save()
+            send_payment_status_email(user.email, payment_id=payment_record.payment_id, payment_status='Paid', payment_description="Payment Successful")
                 # return redirect('create_stripe_customer')
 
             if payment_record.membership:
@@ -3360,6 +3361,7 @@ class StripeWebhookView(View):
                 user.membership_expiry = datetime.fromtimestamp(current_period_end)
                 
                 user.save()
+            send_payment_status_email(user.email, payment_id=subscription_id, payment_status='Paid', payment_description="Subscription Created Successfully")
 
 
 
@@ -3377,6 +3379,7 @@ class StripeWebhookView(View):
                 )
                 user.stripe_customer_id = customer.id
                 user.save()
+            send_payment_status_email(user.email, payment_id=session['id'], payment_status='Failed', payment_description="Session Expired")
 
         elif event['type'] == 'invoice.payment_succeeded':
             invoice = event['data']['object']
@@ -3400,6 +3403,7 @@ class StripeWebhookView(View):
                 description=f"Subscription payment credited {payment_record.total_credits} to the user {user.email}",
                 credit_balance_left=user.credit
             )
+            send_payment_status_email(user.email, payment_id=subscription_id, payment_status='Paid', payment_description="Subscription Payment Successful")
 
         elif event['type'] == 'invoice.payment_failed':
             invoice = event['data']['object']
@@ -3408,6 +3412,25 @@ class StripeWebhookView(View):
             payment_record.payment_status = 'Failed'
             payment_record.payment_description = "Subscription Payment Failed"
             payment_record.save()
+            user=payment_record.user
+            send_payment_status_email(user.email, payment_id=subscription_id, payment_status='Failed', payment_description="Subscription Payment Failed")
+
+        elif event['type'] == 'invoiceitem.deleted':
+            subscription = event['data']['object']
+            
+            subscription_id = subscription['subscription']
+            payment_record = PaymentRecord.objects.get(payment_id=subscription_id)
+            payment_record.payment_status = 'Cancelled'
+            payment_record.payment_description = "Subscription Cancelled Successfully"
+            payment_record.save()
+
+            user = payment_record.user
+            if user:
+                user.is_subscribed = False
+                user.membership_expiry = None
+                user.membership = None
+                user.save()
+            send_payment_status_email(user.email, payment_id=subscription_id, payment_status='Cancelled', payment_description="Subscription Cancelled Successfully")
 
 
         elif event['type'] == 'customer.subscription.deleted':
@@ -3425,6 +3448,7 @@ class StripeWebhookView(View):
                 user.membership_expiry = None
                 user.membership = None
                 user.save()
+            send_payment_status_email(user.email, payment_id=subscription_id, payment_status='Failed', payment_description="Subscription Cancelled Successfully")
 
 
         elif event['type'] == 'payment_intent.payment_failed':
@@ -3443,6 +3467,7 @@ class StripeWebhookView(View):
                 )
                 user.stripe_customer_id = customer.id
                 user.save()
+            send_payment_status_email(user.email, payment_id=session['id'], payment_status='Failed', payment_description=error_message)
 
         elif event['type'] == 'payment_intent.canceled':
             print(" I am inside payment cancelled")
@@ -3463,6 +3488,7 @@ class StripeWebhookView(View):
                 user.save()
 
             # Send email to user
+            send_payment_status_email(user.email, payment_id=session['id'], payment_status='Failed', payment_description=error_message)
             # subject = "Payment Canceled"
             # message = render_to_string('email/payment_canceled.html', {'user': user})
             # from_email = "your_email@example.com"
@@ -3548,6 +3574,8 @@ class CancelSubscriptionView(APIView):
             user.membership_expiry = None
             user.membership = None
             user.save()
+            send_payment_status_email(user.email, payment_id=subscription_id, payment_status='Failed', payment_description="Subscription Cancelled Successfully")
+
             
             return Response({"Message": "Subscription cancelled successfully"}, status=status.HTTP_200_OK)
         except stripe.error.StripeError as e:
@@ -3557,14 +3585,8 @@ class CancelSubscriptionView(APIView):
 
 class get_membership(APIView):
     def post(self,request):
-        # user_id = get_user_id_from_token(request)
-        # user = CustomUser.objects.filter(id=user_id).first()
-        # if not user:
-        #     return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
         lst=[]
         membership_list = Membership.objects.all()
-        # print(settings.YOUR_DOMAIN)
-        # print(type(settings.YOUR_DOMAIN))
         if membership_list:
             for membership in membership_list:
                 mem={
@@ -3590,210 +3612,7 @@ class get_membership(APIView):
 from dateutil.relativedelta import relativedelta   
 from datetime import datetime
 
-# class AdminUpdateMembership(APIView):
-#     """ 
-#     Update-Membership-details if token is of super user
-#     """
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
 
-#     def post(self, request, format=None):
-#         user_id = get_user_id_from_token(request)
-#         user, is_superuser = IsSuperUser(user_id)
-#         if not user or not is_superuser:
-#             msg = 'could not found the super user'
-#             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         if 'membership_id' not in request.data or not request.data.get('membership_id'):
-#             msg = 'could not found the membership_id'
-#             return Response({'Message' : msg}, status=status.HTTP_400_BAD_REQUEST)
-        
-#         if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits', 'stripe_price_id', 'Membership Feature 1', 'Membership Feature 2', 'Membership Feature 3', 'Membership Feature 4', 'Membership Feature 5']):
-#             msg = 'No details given to update in Membership.'
-#             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
-            
-#         membership = Membership.objects.filter(id=request.data.get('membership_id')).first()
-#         if not membership :
-#             return Response({'Message' : 'Could not got the Membership Details'}, status=status.HTTP_204_NO_CONTENT)
-
-#         try:
-
-#             if 'price' in request.data:
-#                 membership.price = request.data['price']
-#             if 'name' in request.data:
-#                 membership.name = request.data['name']
-#             if 'duration_days' in request.data:
-#                 membership.duration_days = request.data['duration_days']
-#             if 'credits' in request.data:
-#                 membership.credits = request.data['credits']
-
-#             membership.save()
-            
-#             msg = 'Successfully Modified the Membership details'
-#             status_code = status.HTTP_200_OK
-            
-#         except Exception as e:
-#             msg = f'Membership details Update Failed: {str(e)}'
-#             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-#         return Response({'Message' : msg}, status=status_code)
-    
-
-# class AdminUpdateMembership(APIView):
-#     """
-#     Update-Membership-details if token is of super user
-#     """
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request, format=None):
-#         user_id = get_user_id_from_token(request)
-#         user, is_superuser = IsSuperUser(user_id)
-#         if not user or not is_superuser:
-#             msg = 'Could not find the super user'
-#             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         if 'membership_id' not in request.data or not request.data.get('membership_id'):
-#             msg = 'Could not find the membership_id'
-#             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
-
-#         if not any(key in request.data for key in ['price', 'name', 'duration_days', 'credits']):
-#             msg = 'No details given to update in Membership.'
-#             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
-
-#         membership = Membership.objects.filter(id=request.data.get('membership_id')).first()
-#         if not membership:
-#             return Response({'Message': 'Could not get the Membership Details'}, status=status.HTTP_204_NO_CONTENT)
-
-#         try:
-#             stripe_price_id = membership.stripe_price_id
-#             if not stripe_price_id:
-#                 msg = 'Stripe price ID not found for the membership'
-#                 return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
-
-#             if 'price' in request.data:
-#                 new_price = request.data['price']
-#                 stripe.Price.modify(
-#                     stripe_price_id,
-#                     unit_amount=int(new_price * 100),  # Stripe expects the amount in cents
-#                 )
-#                 membership.price = new_price
-
-#             if 'name' in request.data:
-#                 new_name = request.data['name']
-#                 stripe.Product.modify(
-#                     stripe.Price.retrieve(stripe_price_id)['product'],
-#                     name=new_name
-#                 )
-#                 membership.name = new_name
-
-#             if 'duration_days' in request.data:
-#                 new_duration = request.data['duration_days']
-#                 stripe.Price.modify(
-#                     stripe_price_id,
-#                     recurring={'interval': 'day', 'interval_count': new_duration}
-#                 )
-#                 membership.duration_days = new_duration
-
-#             if 'credits' in request.data:
-#                 membership.credits = request.data['credits']
-
-#             membership.save()
-
-#             msg = 'Successfully Modified the Membership details'
-#             status_code = status.HTTP_200_OK
-
-#         except Exception as e:
-#             msg = f'Membership details Update Failed: {str(e)}'
-#             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-#         return Response({'Message': msg}, status=status_code)
-
-
-# class AdminUpdateMembership(APIView):
-#     """
-#     Update Membership details if the token is of a superuser.
-#     """
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request, format=None):
-#         user_id = get_user_id_from_token(request)
-#         user, is_superuser = IsSuperUser(user_id)
-#         if not user or not is_superuser:
-#             msg = 'Could not find the superuser'
-#             return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         membership_id = request.data.get('membership_id')
-#         if not membership_id:
-#             msg = 'Could not find the membership_id'
-#             return Response({'Message': msg}, status=status.HTTP_400_BAD_REQUEST)
-
-#         try:
-#             membership = Membership.objects.get(id=membership_id)
-#         except Membership.DoesNotExist:
-#             msg = 'Membership not found'
-#             return Response({'Message': msg}, status=status.HTTP_404_NOT_FOUND)
-
-#         try:
-#             stripe_price_id = membership.stripe_price_id
-
-#             if 'duration_days' in request.data:
-#                 new_duration = request.data['duration_days']
-#                 if stripe_price_id:
-#                     stripe.Price.modify(
-#                         stripe_price_id,
-#                         recurring={'interval': 'day', 'interval_count': new_duration}
-#                     )
-#                 else:
-#                     # Log error or raise exception, as modifying duration without a price might lead to inconsistency
-#                     pass
-
-#                 membership.duration_days = new_duration
-
-#             if 'price' in request.data:
-#                 new_price = request.data['price']
-#                 if stripe_price_id:
-#                     stripe.Price.modify(
-#                         stripe_price_id,
-#                         unit_amount=int(new_price * 100)  # Amount in cents
-#                     )
-                    
-#                 else:
-#                     # Log error or raise exception, as modifying price without a price might lead to inconsistency
-#                     pass
-
-#                 membership.price = new_price
-
-#             if 'name' in request.data:
-#                 new_name = request.data['name']
-#                 if stripe_price_id:
-#                     stripe.Product.modify(
-#                         stripe.Price.retrieve(stripe_price_id)['product'],
-#                         name=new_name
-#                     )
-#                 else:
-#                     # Log error or raise exception, as modifying name without a price might lead to inconsistency
-#                     pass
-
-#                 membership.name = new_name
-
-#             if 'credits' in request.data:
-#                 membership.credits = request.data['credits']
-
-#             membership.save()
-
-#             msg = 'Successfully modified the Membership details'
-#             status_code = status.HTTP_200_OK
-
-#         except stripe.error.StripeError as e:
-#             msg = f'Stripe error: {str(e)}'
-#             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-#         except Exception as e:
-#             msg = f'Error: {str(e)}'
-#             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-#         return Response({'Message': msg}, status=status_code)
 
 
 class AdminUpdateMembership(APIView):
@@ -4043,137 +3862,6 @@ class UserPaymentLatest(APIView):
 
 
 
-# class UpgradeSubscriptionView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         if not user:
-#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         new_membership_id = request.data.get('new_membership_id')
-#         if not new_membership_id:
-#             return Response({"Message": "New membership ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         new_membership = Membership.objects.get(id=new_membership_id)
-#         current_subscription_id = stripe.Subscription.list(customer=user.stripe_customer_id, status='active').data[0].id
-
-#         try:
-#             updated_subscription = stripe.Subscription.modify(
-#                 current_subscription_id,
-#                 cancel_at_period_end=False,
-#                 proration_behavior='create_prorations',
-#                 items=[{
-#                     'id': stripe.Subscription.retrieve(current_subscription_id).items.data[0].id,
-#                     'price': new_membership.stripe_price_id,
-#                 }]
-#             )
-#             user.membership = new_membership
-#             user.save()
-
-#             return Response({'subscriptionId': updated_subscription.id})
-
-#         except stripe.error.StripeError as e:
-#             return Response({'error': str(e)}, status=400)
-
-# class DowngradeSubscriptionView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         if not user:
-#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         new_membership_id = request.data.get('new_membership_id')
-#         if not new_membership_id:
-#             return Response({"Message": "New membership ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         new_membership = Membership.objects.get(id=new_membership_id)
-#         current_subscription_id = stripe.Subscription.list(customer=user.stripe_customer_id, status='active').data[0].id
-
-#         try:
-#             updated_subscription = stripe.Subscription.modify(
-#                 current_subscription_id,
-#                 cancel_at_period_end=False,
-#                 proration_behavior='create_prorations',
-#                 items=[{
-#                     'id': stripe.Subscription.retrieve(current_subscription_id).items.data[0].id,
-#                     'price': new_membership.stripe_price_id,
-#                 }]
-#             )
-#             user.membership = new_membership
-#             user.save()
-
-#             return Response({'subscriptionId': updated_subscription.id})
-
-#         except stripe.error.StripeError as e:
-#             return Response({'error': str(e)}, status=400)
-
-# @csrf_exempt
-# def update_subscription(request):
-#     if request.method == 'POST':
-#         data = json.loads(request.body)
-#         user_id = get_user_id_from_token(request)
-#         user = CustomUser.objects.filter(id=user_id).first()
-#         if not user:
-#             return Response({"Message": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         new_membership_id = data['new_membership_id']
-#         if not new_membership_id:
-#             return Response({"Message": "New membership ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
-#         # data = json.loads(request.body)
-#         subscription_id = user.stripe_customer_id
-#         # new_membership_id = request.data.get('new_membership_id')
-
-#         mem = Membership.objects.get(id=new_membership_id)
-#         new_price_id = mem.stripe_price_id
-
-#         try:
-#             # Retrieve the subscription
-#             # subscription = stripe.Subscription.retrieve(subscription_id)
-
-#             # Retrieve all subscriptions for the customer.
-#             subscriptions = stripe.Subscription.list(customer=user.stripe_customer_id)
-#             print("The susbcription are as follows: ",subscriptions)
-#             # Extract and print subscription IDs.
-#             subscription_ids = [subscription.id for subscription in subscriptions.auto_paging_iter()]
-
-#             print(subscription_ids)
-
-#             subscription_id = subscription_ids[0]
-
-#             subscription = stripe.Subscription.retrieve(subscription_id)
-
-
-#             # return JsonResponse({"ID":f"The is is as {subscription_ids[0]}"})
-
-#             # Update the subscription with proration
-#             updated_subscription = stripe.Subscription.modify(
-#                 subscription_id,
-#                 items=[{
-#                     'id': subscription['items']['data'][0].id,
-#                     'price': new_price_id,
-#                 }],
-#                 proration_behavior='create_prorations',
-#             )
-
-#             # Retrieve the upcoming invoice to see the proration adjustment
-#             upcoming_invoice = stripe.Invoice.upcoming(
-#                 subscription=subscription_id,
-#             )
-
-#             return JsonResponse({
-#                 'subscription': updated_subscription,
-#                 'upcoming_invoice': upcoming_invoice,
-#             })
-#         except Exception as e:
-#             return JsonResponse({'error': str(e)}, status=400)
-
-#     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
 
@@ -4239,6 +3927,8 @@ class UpdateSubscriptionView(APIView):
                 user.membership_expiry = timezone.now() + timedelta(days = new_mems.duration_days)
             user.is_subscribed =True
             user.save()
+
+            send_payment_status_email(user.email, payment_id=subscription_id, payment_status='Paid', payment_description="Subscription Updated Successfully")
         
             return JsonResponse({
                 'Message': "Subscription Updated Sucessfully"
@@ -4383,25 +4073,9 @@ class AdminGoogleAnalytics(APIView):
 
             return result
 
-        # if __name__ == '__main__':
-        # period = 'month'  # Change to 'day', 'week' or 'month' as needed
-        # range_num  = 12 # How many datas are needed
         try:
             data = get_ga4_data(date_filter)
             
-
-            # jsonn_response = {
-            #     'Total user' : total_user,
-            #     'Total Original Images' : total_original_image,
-            #     'Total Regenerated Images' : total_regen_image,
-            #     'Total Payments' : total_payment_count,
-            #     'Total Payment Amount' : str(tot_pay),
-            #     'Total Credit Records': total_credit_records,
-            #     'Total Credit Added': tot_cred_add,
-            #     'Total Credit Deducted': tot_cred_deduct,
-            # }
-            # response = Response(jsonn_response, status=status.HTTP_200_OK)
-
             return JsonResponse(data, status=status.HTTP_200_OK)
         except Exception as e:
             return JsonResponse({"Message":f"Error Occured: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -43,11 +43,16 @@ class RegeneratedImageAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'created']
     list_filter = ['public', 'created']
 
+class PaymentRecordAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user','total_amount','total_credits','date_time','payment_status', 'payment_description','payment_id']  
+
+
+
 admin.site.register(Membership,MembershipAdmin)
 
 admin.site.register(CreditHistory,CreditHistoryAdmin)
 
-admin.site.register(PaymentRecord)
+admin.site.register(PaymentRecord,PaymentRecordAdmin)
 
 admin.site.register(RegeneratedImage,RegeneratedImageAdmin)
 
