@@ -4317,7 +4317,11 @@ class AdminGoogleAnalytics(APIView):
             return ranges
 
         def get_ga4_data(period='day', range_num=12):
-            KEY_FILE_LOCATION = r"home\new-livingimage-analytics-api-8842a75f6a33.json"
+            # KEY_FILE_LOCATION = r"home\new-livingimage-analytics-api-8842a75f6a33.json"
+            # Get the current directory where the Python script is located
+            current_directory = os.path.dirname(os.path.abspath(__file__))
+            # Construct the full path to the JSON file
+            KEY_FILE_LOCATION = os.path.join(current_directory, "new-livingimage-analytics-api-8842a75f6a33.json")
             PROPERTY_ID = '444002701'
             
             credentials = service_account.Credentials.from_service_account_file(KEY_FILE_LOCATION)
