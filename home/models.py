@@ -261,7 +261,15 @@ class CreditHistory(TimeStampModel):
 
 #---------------------------------------------------Payment Models-------------------------------------------------------------
 
+#---------------------------------------------------Payment Models-------------------------------------------------------------
+class creditbundle(models.Model):
+    CREDIT_CHOICES = [(100, '100'), (200, '200'), (300, '300')]
+    credits_count = models.IntegerField(choices=CREDIT_CHOICES)
+    discount = models.FloatField(default=0.0)
 
+    def __str__(self):
+        return f"{self.credits_count} credits with {self.discount}% discount"
+#---------------------------------------------------Payment Models-------------------------------------------------------------
 
 
 

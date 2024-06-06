@@ -65,6 +65,10 @@ urlpatterns = [
 
     path('api/admin/update-membership/', AdminUpdateMembership.as_view(), name='AdminUpdateMembership'),  # Membership
 
+    path('api/admin/update-credit-bundle/', AdminUpdateCreditBundle.as_view(), name='AdminUpdateCreditBundle'),  # Credit Bundle
+
+
+
 
 
     path('checkout/', CheckoutView.as_view(), name='checkout'),    # STRIPE
@@ -88,6 +92,10 @@ urlpatterns = [
     path('api/update_membership/', UpdateSubscriptionView.as_view(), name='update_subscription'), 
 
     path('api/change_card_detail/', ChangeCardDetailView.as_view(), name='ChangeCardDetailView'), 
+
+    path('api/buy-credit-bundle/', BuyCreditBundle.as_view(), name='BuyCreditBundle'),
+
+    path('api/get-credit-bundle/', GetCreditBundle.as_view(), name='GetCreditBundle'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

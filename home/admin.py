@@ -46,7 +46,11 @@ class RegeneratedImageAdmin(admin.ModelAdmin):
 class PaymentRecordAdmin(admin.ModelAdmin):
     list_display = ['id', 'user','total_amount','total_credits','date_time','payment_status', 'payment_description','payment_id']  
 
+class CreditbundleAdmin(admin.ModelAdmin):
+    list_display = ['id', 'credits_count','discount']  
 
+
+admin.site.register(creditbundle,CreditbundleAdmin)
 
 admin.site.register(Membership,MembershipAdmin)
 

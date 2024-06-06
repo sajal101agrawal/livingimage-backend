@@ -3034,16 +3034,6 @@ class CheckoutView(APIView):
                             'memberships': Membership.objects.all()
                         })
 
-                        # if customer.invoice_settings.default_payment_method:
-                        #     # Customer has a default payment method, render checkout page
-                        #     return render(request, 'checkout.html', {
-                        #         'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
-                        #         'memberships': Membership.objects.all()
-                        #     })
-                        # else:
-                        #     # Customer does not have a default payment method, redirect to add payment method page
-                        #     return Response({"url":f'https://buy.stripe.com/28og1h5834Lb79S5kk?session_id={user.stripe_customer_id}'})  # You need to define this URL
-                            
 
                 except stripe.error.InvalidRequestError as e:
                     # Stripe customer retrieval failed
@@ -3089,25 +3079,6 @@ class CheckoutView(APIView):
                 else:
                     customer = stripe.Customer.retrieve(user.stripe_customer_id)
 
-                # # Create a subscription
-                # subscription = stripe.Subscription.create(
-                #     customer=user.stripe_customer_id,
-                #     items=[{'price': membership.stripe_price_id}],
-                #     expand=['latest_invoice.payment_intent']
-                # )
-
-                # PaymentRecord.objects.create(
-                #     total_amount=total_amount,
-                #     total_credits=total_credits,
-                #     payment_id="Temp",
-                #     payment_mode='Stripe',
-                #     user=user,
-                #     payment_status='Pending',
-                #     membership=membership,
-                #     date_time=timezone.now() 
-                # )
-
-                # return Response({'subscriptionId': "TEMP"})
 
             except stripe.error.CardError as e:
                 return Response({'error': str(e)}, status=400)
@@ -3197,39 +3168,7 @@ class CheckoutView(APIView):
 
             except stripe.error.CardError as e:
                 return Response({'error': str(e)}, status=400)
-        # elif membership_id:
 
-        #     membership = Membership.objects.get(id=membership_id)
-        #     price_id = membership.stripe_price_id
-        #     customer_id = user.stripe_customer_id  # Replace 'your_customer_id' with the actual customer ID
-
-        #     #stripe.api_key = "sk_test_51OmR7LFgeSLbzlIV4PWYM8azw8RoCk86r1YrmaQYGJsueGVkvY8jHcQsxZgNiOvrAzLJREhwm6lJm7R8fLuwfwte00gRgjL3Nb"
-
-        #     session = stripe.checkout.Session.create(
-        #     # success_url='https://example.com/success.html?session_id={CHECKOUT_SESSION_ID}',
-        #     # cancel_url='https://example.com/canceled.html',
-        #     success_url=settings.FRONTEND_DOMAIN + '/payment/success/',
-        #     cancel_url=settings.FRONTEND_DOMAIN + '/payment/failed/',
-        #     mode='subscription',
-        #     line_items=[{
-        #         'price': price_id,
-        #         'quantity': 1
-        #     }],
-        #     customer=customer_id
-        #     )
-
-        #     # PaymentRecord.objects.create(
-        #     #         total_amount=total_amount,
-        #     #         total_credits=total_credits,
-        #     #         payment_id=checkout_session['id'],
-        #     #         payment_mode='Stripe',
-        #     #         user=user,
-        #     #         payment_status='Pending',
-        #     #         membership=membership if membership_id else None,
-        #     #         date_time=timezone.now() 
-        #     #     )
-
-        #     return Response({"Session ID":session})
 
 
 class PaymentSuccessView(TemplateView):
@@ -3489,12 +3428,7 @@ class StripeWebhookView(View):
 
             # Send email to user
             send_payment_status_email(user.email, payment_id=session['id'], payment_status='Failed', payment_description=error_message)
-            # subject = "Payment Canceled"
-            # message = render_to_string('email/payment_canceled.html', {'user': user})
-            # from_email = "your_email@example.com"
-            # to_email = user.email
 
-            # send_mail(subject, message, from_email, [to_email])
 
 
         return HttpResponse(status=200)
@@ -4079,3 +4013,140 @@ class AdminGoogleAnalytics(APIView):
             return JsonResponse(data, status=status.HTTP_200_OK)
         except Exception as e:
             return JsonResponse({"Message":f"Error Occured: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AdminUpdateCreditBundle(APIView):
+    """ 
+    Update-Credit-Bundles if token is of super user, Update Discount and Credits Count.
+    """
+
+    def post(self,request):
+        user_id = get_user_id_from_token(request)
+        user, is_superuser = IsSuperUser(user_id)
+        if not user or not is_superuser:
+            msg = 'could not find the super user'
+            return Response({"Message": msg}, status=status.HTTP_401_UNAUTHORIZED)
+       
+        if not "bundle_id" in request.data or not request.data.get("bundle_id"):
+            return Response({"Message":"No Bundle id Found."}, status=status.HTTP_400_BAD_REQUEST)
+        bundle_id = request.data.get("bundle_id")
+
+        credit_count = request.data.get("credit_count")
+        
+        discount = request.data.get("discount")
+        
+
+        if "discount" not in request.data and "credit_count" not in request.data:
+            return Response({"Message": "credit_count or discount not found!!!"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            bundle_obj = creditbundle.objects.get(id = bundle_id)
+
+            if discount:
+                bundle_obj.discount = float(discount)
+            
+            if credit_count:
+                bundle_obj.credits_count = int(credit_count)
+            
+            bundle_obj.save()            
+            return Response({"Message":"Bundle details Updated Successfully"})
+        except Exception as e:
+            return Response({"Message":f"Bundle details Update Failed: {str(e)}"})
+
+
+
+class BuyCreditBundle(APIView):
+    """ 
+    Buy-Credit-Bundles if token is of user, Gives Extra Discount compared to regular price.
+    """
+
+    def post(self,request):
+        user_id = get_user_id_from_token(request)
+        user = CustomUser.objects.filter(id = user_id).first()
+
+        if not user:
+            return Response({"Message":"User not found!!!!"})
+        if not "bundle_id" in request.data or not request.data.get("bundle_id"):
+            return Response({"Message":"No Bundle id Found."})
+        bundle_id = request.data.get("bundle_id")
+        
+        bundle_obj = creditbundle.objects.get(id = bundle_id)
+
+        price = CreditPricing.objects.get(id=1)
+
+        tot_credit = bundle_obj.credits_count
+
+        # Calculate discounted price based on the original price and discount
+        original_price = price.price  
+        discounted_price = tot_credit * float(original_price) - (tot_credit * float(original_price) * (float(bundle_obj.discount) / 100))
+
+        #-----------------------------------------Checkout Session---------------------------------------------------------------
+        total_amount = discounted_price
+        total_credits = tot_credit
+
+        if not user.stripe_customer_id:
+            # Create a new Stripe customer if not exists
+            customer = stripe.Customer.create(email=user.email, name=user.get_full_name())
+            user.stripe_customer_id = customer.id
+            user.save()
+
+        # Create payment session or initiate checkout process
+        try:
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': f'{total_credits} Credits',
+                        },
+                        'unit_amount': int(total_amount * 100),  # Convert to cents
+                    },
+                    'quantity': 1,
+                }],
+                customer=user.stripe_customer_id,
+                mode='payment',
+                success_url=settings.FRONTEND_DOMAIN + '/payment/success/',
+                cancel_url=settings.FRONTEND_DOMAIN + '/payment/failed/',
+                expires_at=int((timezone.now() + timedelta(minutes=30)).timestamp()),  # Expires in 10 minutes
+            )
+
+
+            PaymentRecord.objects.create(
+                    total_amount=total_amount,
+                    total_credits=total_credits,
+                    payment_id=session['id'],
+                    payment_mode='Stripe',
+                    user=user,
+                    payment_status='Pending',
+                    membership=None,
+                    date_time=timezone.now() 
+                )
+
+            return Response({"Session ID": session.id})
+         #-----------------------------------------Checkout Session---------------------------------------------------------------
+        except Exception as e:
+            return Response({"Message": f"Failed to initiate checkout: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+        #-----------------------------------------Checkout Session---------------------------------------------------------------
+        
+        # return Response({"Message":"Bundle details fetched Successfully", "Bundle_data": bundle_id})
+    
+
+class GetCreditBundle(APIView):
+    """ 
+    Get-Credit-Bundles-Details.
+    """
+
+    def post(self,request):
+        bundle_data =[]
+        bundle_obj = creditbundle.objects.all()
+        for bundles in bundle_obj:
+            data ={
+                "Total_credits" : bundles.credits_count,
+                "Discount" : bundles.discount
+            }
+            bundle_data.append(data)
+        
+        
+        return Response({"Message":"Bundle details fetched Successfully", "Bundle_data":bundle_data})
