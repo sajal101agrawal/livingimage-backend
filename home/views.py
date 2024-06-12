@@ -3372,6 +3372,41 @@ class StripeWebhookView(View):
             send_payment_status_email(user.email, payment_id=subscription_id, payment_status='Cancelled', payment_description="Subscription Cancelled Successfully")
 
 
+        # elif event['type'] == 'invoice.created':
+        #     invoice = event['data']['object']
+        #     subscription_id = invoice['subscription']
+        #     if invoice['paid']:
+        #         payment_status = 'Paid'
+        #     else:
+        #         payment_status = 'Pending'
+        #     payment_record = PaymentRecord.objects.create(
+        #         payment_id=subscription_id,
+        #         payment_status=payment_status,
+        #         payment_description='Invoice Created',
+        #         amount=invoice['amount_due'],
+        #         user=user  # You'll need to determine how to link the user
+        #     )
+        #     send_payment_status_email(user.email, payment_id=subscription_id, payment_status=payment_status, payment_description='Invoice Created')
+
+        # elif event['type'] == 'invoiceitem.created':
+        #     invoice_item = event['data']['object']
+        #     subscription_id = invoice_item['subscription']
+
+        #     if invoice_item['amount'] == 0 or invoice_item['amount_paid'] == invoice_item['amount']:
+        #         payment_status = 'Paid'
+        #     else:
+        #         payment_status = 'Pending'
+            
+        #     payment_record = PaymentRecord.objects.create(
+        #         payment_id=subscription_id,
+        #         payment_status=payment_status,
+        #         payment_description='Invoice Item Created',
+        #         amount=invoice_item['amount'],
+        #         user=user  # You'll need to determine how to link the user
+        #     )
+        #     send_payment_status_email(user.email, payment_id=subscription_id, payment_status=payment_status, payment_description='Invoice Item Created')
+
+
         elif event['type'] == 'customer.subscription.deleted':
             subscription = event['data']['object']
             
